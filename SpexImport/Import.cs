@@ -84,26 +84,106 @@ namespace SpexImport
                     command.ExecuteNonQuery();
                 }
 
-                using (var command = new NpgsqlCommand("CREATE TABLE products (product_id VARCHAR(32) NOT NULL, manufacture_id VARCHAR(32), is_active boolean, mfg_pn VARCHAR(32) NOT NULL, category_id INT, is_accessory boolean, equivalency NUMERIC, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(product_id, mfg_pn));", conn))
+                using (var command = new NpgsqlCommand("CREATE TABLE products (product_id VARCHAR(50) NOT NULL, mfg_id VARCHAR(16), mfg_pn VARCHAR(128) NOT NULL, category_id INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(product_id, mfg_pn));", conn))
                 {
                     command.ExecuteNonQuery();
-                    ImportProductsToDatabase();
+                }
+
+                // Master import
+                Console.WriteLine("[SQL] Importing products.csv");
+                ImportProductsToDatabase(conn);
+
+                using (var command = new NpgsqlCommand("DROP TABLE IF EXISTS products_descriptions", conn))
+                {
+                    command.ExecuteNonQuery();
+                }
+
+                using (var command = new NpgsqlCommand("CREATE TABLE products_descriptions (product_id VARCHAR(50) NOT NULL, description TEXT, is_default CHAR(1), type CHAR(1), locale_id CHAR(1), is_active CHAR(1), PRIMARY KEY(product_id));", conn))
+                {
+                    command.ExecuteNonQuery();
+                }
+
+                Console.WriteLine("[SQL] Importing product_descriptions.csv");
+                //ImportProductDescriptionToDatabase(conn);
+                conn.Close();
+            }
+        }
+
+        static void ImportProductsToDatabase(NpgsqlConnection conn)
+        {
+            string file = @".\spex\EN_US_B_product.csv";
+
+            using (StreamReader reader = new StreamReader(file))
+            {
+                char[] delimiters = new char[] { ',' };
+                while (!reader.EndOfStream)
+                {
+                    string line = reader.ReadLine();
+                    //line = line.Replace("\"", string.Empty);
+
+                    string[] field = line.Split(delimiters);
+                    for (int i = 0; i < field.Length; i++)
+                    {
+                        field[i] = field[i].Replace("\"", string.Empty);
+                    }
+                    //string teststr = String.Format("{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}", field[0], field[1], field[2], field[3], field[4], field[5], field[6], field[7], field[8]);
+                    //Console.WriteLine(teststr);
+
+                    string query_cmd = "INSERT INTO products (product_id, mfg_id, mfg_pn, category_id, is_active, equivalency, create_date, modify_date, last_update) VALUES (@product_id, @mfg_id, @mfg_pn, @category_id, @is_active, @equivalency, @create_date, @modify_date, @last_update);";
+                    using (var command = new NpgsqlCommand(query_cmd, conn))
+                    {
+                        Console.WriteLine(field[0] + field[3]);
+                        int category_id = Int32.Parse(field[3]);
+                        DateTime create_date = DateTime.Parse(field[6].ToString());
+                        DateTime modify_date = DateTime.Parse(field[6].ToString());
+                        DateTime last_update = DateTime.Parse(field[6].ToString());
+
+                        command.Parameters.AddWithValue("product_id", field[0]);
+                        command.Parameters.AddWithValue("mfg_id", field[1]);
+                        command.Parameters.AddWithValue("mfg_pn", field[2]);
+                        command.Parameters.AddWithValue("category_id", category_id);
+                        command.Parameters.AddWithValue("is_active", field[4]);
+                        command.Parameters.AddWithValue("equivalency", field[5]);
+                        command.Parameters.AddWithValue("create_date", create_date);
+                        command.Parameters.AddWithValue("modify_date", modify_date);
+                        command.Parameters.AddWithValue("last_update", last_update);
+
+                        command.ExecuteNonQuery();
+                    }
                 }
             }
         }
 
-        static void ImportProductsToDatabase()
+        static void ImportProductDescriptionToDatabase(NpgsqlConnection conn)
         {
-            string file = @".\spex\EN_US_B_product.csv";
+            string file = @".\spex\EN_US_B_productdescriptions.csv";
 
             using (TextFieldParser parser = new TextFieldParser(file))
             {
                 parser.TextFieldType = FieldType.Delimited;
                 parser.SetDelimiters(",");
+                parser.HasFieldsEnclosedInQuotes = true;
+                parser.TrimWhiteSpace = true;
 
                 while (!parser.EndOfData)
                 {
-                    string[] fields = parser.ReadFields();
+                    parser.HasFieldsEnclosedInQuotes = true;
+                    parser.SetDelimiters(",");
+                    string[] field = parser.ReadFields();
+
+                    string query_cmd = "INSERT INTO products_descriptions (product_id, description, is_default, type, locale_id, is_active) VALUES (@product_id, @description, @is_default, @type, @locale_id, @is_active);";
+                    using (var command = new NpgsqlCommand(query_cmd, conn))
+                    {
+                        command.Parameters.AddWithValue("product_id", field[0]);
+                        command.Parameters.AddWithValue("description", field[1]);
+                        command.Parameters.AddWithValue("is_default", field[2]);
+                        command.Parameters.AddWithValue("type", field[3]);
+                        command.Parameters.AddWithValue("locale_id", field[4]);
+                        command.Parameters.AddWithValue("is_active", field[5]);
+
+                        command.ExecuteNonQuery();
+                    }
+                    Console.WriteLine(query_cmd);
                 }
             }
         }
