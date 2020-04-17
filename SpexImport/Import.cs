@@ -19,7 +19,6 @@ namespace SpexImport
 
         static void DownloadFromFTP()
         {
-
         }
 
         static void UnzipCatalogContents()
