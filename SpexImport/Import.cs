@@ -14,8 +14,15 @@ using Microsoft.VisualBasic.FileIO;
 using System.Configuration;
 using System.Collections.Specialized;
 
+// TODO: Download + unzip all needed files, put in to 'SPEX' directory. Cycle through directory and make a call for each file under an iter.
 namespace SpexImport
 {
+    class SQLTable
+    {
+        public string Filename { get; set; }
+        public string QueryCmd { get; set; }
+    }
+
     class Import
     {
         private static string db_host, db_user, db_pass, db_name;
@@ -24,10 +31,25 @@ namespace SpexImport
         static void Main(string[] args)
         {
             LoadConfiguration();
-            //DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip");
+
+            Console.Write("[FTP] Downloading basic...");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
+            Console.Write(" Done\n");
+
+            Console.Write("[FTP] Downloading accessories...");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
+            Console.Write(" Done\n");
+
+            Console.Write("[FTP] Extracting basic.zip...");
+            UnzipCatalogContents("basic.zip");
+            Console.Write(" Done\n");
+
+            Console.Write("[FTP] Extracting accessories.zip...");
+            UnzipCatalogContents("accessories.zip");
+            Console.Write(" Done\n");
+
             ConnectToDatabase();
             //System.Environment.Exit(0);
-            //Thread.Sleep(60 * 600);
         }
 
         static void LoadConfiguration()
@@ -41,7 +63,7 @@ namespace SpexImport
             db_port = Convert.ToUInt32(port);
         }
 
-        static void DownloadFromFTP(string url)
+        static void DownloadFromFTP(string url, string filename)
         {
             FtpWebRequest request = (FtpWebRequest)WebRequest.Create(url);
             request.Method = WebRequestMethods.Ftp.DownloadFile;
@@ -51,7 +73,7 @@ namespace SpexImport
             FtpWebResponse response = (FtpWebResponse)request.GetResponse();
 
             Stream responseStream = response.GetResponseStream();
-            FileStream file = File.Create(@"basic.zip");
+            FileStream file = File.Create(filename);
             byte[] buffer = new byte[32 * 1024];
             int read;
             
@@ -60,28 +82,73 @@ namespace SpexImport
                 file.Write(buffer, 0, read);
             }
 
-            Console.WriteLine($"Download complete, status {response.StatusDescription}");
-
             file.Close();
             response.Close();
-
-            UnzipCatalogContents();
         }
 
-        static void UnzipCatalogContents()
+        static void UnzipCatalogContents(string folder)
         {
-            string zipPath = @".\basic.zip";
+            string zipPath = @".\" + folder;
             string extractPath = @".\spex";
 
             ZipFile.ExtractToDirectory(zipPath, extractPath);
-
-            Console.WriteLine("Unzipped basic.zip successfully");
-
-            ConnectToDatabase();
+            File.Delete(Directory.GetCurrentDirectory() + @"\" + folder);
         }
 
         static void ConnectToDatabase()
         {
+            var tables = new Dictionary<string, SQLTable>()
+            {
+                { "product", new SQLTable
+                    {
+                        Filename = "EN_US_B_product.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));"
+                    }
+                },
+                { "product_attributes", new SQLTable
+                    {
+                        Filename = "EN_US_B_productattributes.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_attributes (productid INT, attributeid BIGINT, setnumber SMALLINT, text TEXT, absolutevalue DOUBLE, unitid INT, isabsolute SMALLINT, isactive SMALLINT, localeid INT, type INT);"
+                    }
+                },
+                { "product_descriptions", new SQLTable
+                    {
+                        Filename = "EN_US_B_productdescriptions.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid VARCHAR(100) NOT NULL, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));"
+                    }
+                },
+                { "product_featurebullets", new SQLTable
+                    {
+                        Filename = "EN_US_B_productfeaturebullets.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
+                    }
+                },
+                { "product_locales", new SQLTable
+                    {
+                        Filename = "EN_US_B_productlocales.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_locales (productid INT, isactive CHAR(1), published TINYTEXT, PRIMARY KEY(productid));"
+                    }
+                },
+                {  "product_accessories", new SQLTable
+                    {
+                        Filename = "EN_US_A_productaccessories.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_accessories (productid INT, accessoryid INT, localeid SMALLINT);"
+                    }
+                },
+                {  "search_attributes", new SQLTable
+                    {
+                        Filename = "EN_US_B_searchattributes.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS search_attributes (productid INT, categoryid INT, unknownid INT, isactive SMALLINT, localeid SMALLINT);"
+                    }
+                },
+                {  "product_keywords", new SQLTable
+                    {
+                        Filename = "EN_US_B_productkeywords.csv",
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_keywords (productid INT, text TEXT, localeid SMALLINT);"
+                    }
+                }
+            };
+
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
             connStr.Server = db_host;
             connStr.UserID = db_user;
@@ -94,122 +161,90 @@ namespace SpexImport
 
             try
             {
-                Console.WriteLine("[SQL] Establsihing connection to MySQL");
+                Console.WriteLine("[MySQL] Establishing connection to MySQL");
                 conn.Open();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SQL] Connection was NOT established to MySQL");
+                Console.WriteLine("[MySQL] Connection was NOT established to MySQL");
                 Console.WriteLine(ex.ToString());
             }
             finally
             {
-                Console.WriteLine("[SQL] Importing product.csv...");
-                ImportProduct(conn);
-
-                Console.WriteLine("[SQL] Importing product_descriptions.csv...");
-                ImportProductDescriptions(conn);
-
-                Console.WriteLine("[SQL] Importing product_featurebullets.csv...");
-                ImportProductFeatures(conn);
+                ParseSpexDirectory(tables, conn);
 
                 conn.Close();
-                Console.WriteLine("[SQL] Connection closed");
+                Console.WriteLine("[MySQL] Connection closed");
+            }
+
+            DeleteSpexDirectory();
+        }
+
+        static void ParseSpexDirectory(dynamic tables, MySqlConnection conn)
+        {
+            var dir = Directory.GetCurrentDirectory();
+            string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                string file = Path.GetFileName(files[i]);
+                foreach (var sqldata in tables)
+                {
+                    if (sqldata.Value.Filename == file)
+                    {
+                        Console.Write("[MySQL] Importing " + file + "...");
+                        ImportSpexData(conn, sqldata.Key, sqldata.Value);
+                        Console.Write(" Done\n");
+                        break;
+                    }
+                }
             }
         }
 
-        static void ImportProduct(MySqlConnection conn)
+        static void ImportSpexData(MySqlConnection conn, string tablename, dynamic values)
         {
-            var dir = Directory.GetCurrentDirectory();
-            string file = @"\spex\EN_US_B_product.csv";
-
-            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product", conn))
+            string queryCmd = String.Format("DROP TABLE IF EXISTS {0}", tablename);
+            using (MySqlCommand cmd = new MySqlCommand(queryCmd, conn))
             {
                 cmd.ExecuteNonQuery();
                 cmd.Dispose();
             }
 
             //Create the TABLE
-            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));", conn))
+            using (MySqlCommand cmd = new MySqlCommand(values.QueryCmd, conn))
             {
                 cmd.ExecuteNonQuery();
                 cmd.Dispose();
             }
 
+            var dir = Directory.GetCurrentDirectory();
             //Bulk load CSV file
             MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
-            bulk.TableName = "product";
+            bulk.TableName = tablename;
             bulk.FieldTerminator = ",";
             bulk.FieldQuotationOptional = false;
             bulk.FieldQuotationCharacter = '"';
             bulk.CharacterSet = "LATIN1";
-            bulk.FileName = dir + file;
+            bulk.FileName = dir + @"\spex\" + values.Filename;
             bulk.Local = true;
             bulk.Load();
         }
 
-        static void ImportProductDescriptions(MySqlConnection conn)
+        static void DeleteSpexDirectory()
         {
             var dir = Directory.GetCurrentDirectory();
-            string file = @"\spex\EN_US_B_productdescriptions.csv";
-
-            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product_descriptions", conn))
+            if (Directory.Exists(dir + @"\spex"))
             {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
+                string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
+                for (int i = 0; i < files.Length; i++)
+                {
+                    string file = Path.GetFileName(files[i]);
+                    if (File.Exists(dir + @"\spex\" + file))
+                        File.Delete(dir + @"\spex\" + file);
+                }
+
+                Directory.Delete(dir + @"\spex");
             }
-
-            //Create the TABLE
-            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product_descriptions (productid VARCHAR(100) NOT NULL, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));", conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
-            /*string strCmd = String.Format("LOAD DATA LOCAL INFILE '{0}{1}' INTO TABLE spex.product_descriptions CHARACTER SET 'LATIN1' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '{2}'", dir, file, "\"");
-            using (MySqlCommand cmd = new MySqlCommand(strCmd, conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }*/
-            MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
-            bulk.TableName = "product_descriptions";
-            bulk.FieldTerminator = ",";
-            bulk.FieldQuotationOptional = false;
-            bulk.FieldQuotationCharacter = '"';
-            bulk.CharacterSet = "LATIN1";
-            bulk.FileName = dir + file;
-            bulk.Local = true;
-            bulk.Load();
-        }
-
-        static void ImportProductFeatures(MySqlConnection conn)
-        {
-            var dir = Directory.GetCurrentDirectory();
-            string file = @"\spex\EN_US_B_productdescriptions.csv";
-
-            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product_featurebullets", conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
-            //Create the TABLE
-            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, text TEXT, modifieddate TIMESTAMP);", conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
-            MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
-            bulk.TableName = "product_featurebullets";
-            bulk.FieldTerminator = ",";
-            bulk.FieldQuotationOptional = false;
-            bulk.FieldQuotationCharacter = '"';
-            bulk.CharacterSet = "LATIN1";
-            bulk.FileName = dir + file;
-            bulk.Local = true;
-            bulk.Load();
         }
     }
 }
