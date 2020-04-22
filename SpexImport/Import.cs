@@ -7,25 +7,38 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Npgsql;
+using MySql.Data;
+using MySql.Data.MySqlClient;
 using Microsoft.VisualBasic.FileIO;
+
+using System.Configuration;
+using System.Collections.Specialized;
 
 namespace SpexImport
 {
     class Import
     {
-        private static string db_host = "localhost";
-        private static string db_user = "spex";
-        private static string db_pass = "spex";
-        private static string db_name = "Spex";
-        private static string db_port = "5432";
+        private static string db_host, db_user, db_pass, db_name;
+        private static uint db_port;
 
         static void Main(string[] args)
         {
+            LoadConfiguration();
             //DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip");
             ConnectToDatabase();
             //System.Environment.Exit(0);
             //Thread.Sleep(60 * 600);
+        }
+
+        static void LoadConfiguration()
+        {
+            db_host = ConfigurationManager.AppSettings["db_host"];
+            db_user = ConfigurationManager.AppSettings["db_user"];
+            db_pass = ConfigurationManager.AppSettings["db_pass"];
+            db_name = ConfigurationManager.AppSettings["db_name"];
+
+            string port = ConfigurationManager.AppSettings["db_port"];
+            db_port = Convert.ToUInt32(port);
         }
 
         static void DownloadFromFTP(string url)
@@ -69,114 +82,134 @@ namespace SpexImport
 
         static void ConnectToDatabase()
         {
-            string connString = String.Format("Server={0};Username={1};Database={2};Port={3};Password={4};SSLMode=Prefer;Pooling=False;Timeout=60;Command Timeout=1200;",
-                db_host,
-                db_user,
-                db_name,
-                db_port,
-                db_pass);
+            MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
+            connStr.Server = db_host;
+            connStr.UserID = db_user;
+            connStr.Password = db_pass;
+            connStr.Database = db_name;
+            connStr.Port = db_port;
+            connStr.AllowLoadLocalInfile = true;
 
-            using (var conn = new NpgsqlConnection(connString))
+            MySqlConnection conn = new MySqlConnection(connStr.ToString());
+
+            try
             {
-                Console.WriteLine("Establishing connection to PostgreSQL Database");
+                Console.WriteLine("[SQL] Establsihing connection to MySQL");
                 conn.Open();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SQL] Connection was NOT established to MySQL");
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                Console.WriteLine("[SQL] Importing product.csv...");
+                ImportProduct(conn);
 
-                using (var command = new NpgsqlCommand("DROP TABLE IF EXISTS product", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
+                Console.WriteLine("[SQL] Importing product_descriptions.csv...");
+                ImportProductDescriptions(conn);
 
-                using (var command = new NpgsqlCommand("CREATE TABLE IF NOT EXISTS product (product_id INT NOT NULL, mfg_id VARCHAR(16), mfg_pn VARCHAR(128) NOT NULL, category_id INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(product_id, mfg_pn));", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
-
-                // Master import
-                Console.WriteLine("[SQL] Importing products.csv");
-                //ImportProductsToDatabase(conn);
-
-                using (var command = new NpgsqlCommand("DROP TABLE IF EXISTS product_descriptions", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
-
-                using (var command = new NpgsqlCommand("CREATE TABLE IF NOT EXISTS product_descriptions (product_id VARCHAR(100) NOT NULL, description TEXT, is_default CHAR(1), type CHAR(1), locale_id CHAR(1), is_active CHAR(1));", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
-
-                Console.WriteLine("[SQL] Importing product_descriptions.csv");
-                ImportProductDescriptionToDatabase(conn);
-
-                using (var command = new NpgsqlCommand("DROP TABLE IF EXISTS product_featurebullets", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
-
-                using (var command = new NpgsqlCommand("CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, text TEXT, modifieddate TIMESTAMP);", conn))
-                {
-                    command.ExecuteNonQuery();
-                }
-
-                Console.WriteLine("[SQL] Importing product_featurebullets.csv");
-                ImportProductFeaturesToDatabase(conn);
+                Console.WriteLine("[SQL] Importing product_featurebullets.csv...");
+                ImportProductFeatures(conn);
 
                 conn.Close();
+                Console.WriteLine("[SQL] Connection closed");
             }
         }
 
-        static void ImportProductsToDatabase(NpgsqlConnection conn)
+        static void ImportProduct(MySqlConnection conn)
         {
             var dir = Directory.GetCurrentDirectory();
             string file = @"\spex\EN_US_B_product.csv";
 
-            using (var command = new NpgsqlCommand("Set client_encoding = 'WIN1252';", conn))
+            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product", conn))
             {
-                command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
 
-            string query_cmd = String.Format("COPY product FROM '{1}{0}' DELIMITER ',' CSV HEADER;", file, dir);
-            using (var command = new NpgsqlCommand(query_cmd, conn))
+            //Create the TABLE
+            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));", conn))
             {
-                command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
+
+            //Bulk load CSV file
+            MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
+            bulk.TableName = "product";
+            bulk.FieldTerminator = ",";
+            bulk.FieldQuotationOptional = false;
+            bulk.FieldQuotationCharacter = '"';
+            bulk.CharacterSet = "LATIN1";
+            bulk.FileName = dir + file;
+            bulk.Local = true;
+            bulk.Load();
         }
 
-        static void ImportProductDescriptionToDatabase(NpgsqlConnection conn)
+        static void ImportProductDescriptions(MySqlConnection conn)
         {
             var dir = Directory.GetCurrentDirectory();
             string file = @"\spex\EN_US_B_productdescriptions.csv";
 
-            string query_cmd = String.Format("COPY product_descriptions FROM PROGRAM 'cmd /c \"type {1}{0}\"' DELIMITER ',' ESCAPE '{2}' CSV;", file, dir, @"\");
-            //string query_cmd = String.Format("COPY product_descriptions FROM 'program cmd /c \"type {1}{0}\"'' DELIMITER ',' ESCAPE '{2}' CSV HEADER", file, dir, @"\");
-
-            using (var command = new NpgsqlCommand("Set client_encoding = 'WIN1252';", conn))
+            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product_descriptions", conn))
             {
-                command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
 
-            using (var command = new NpgsqlCommand(query_cmd, conn))
+            //Create the TABLE
+            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product_descriptions (productid VARCHAR(100) NOT NULL, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));", conn))
             {
-                 command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
+
+            /*string strCmd = String.Format("LOAD DATA LOCAL INFILE '{0}{1}' INTO TABLE spex.product_descriptions CHARACTER SET 'LATIN1' FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '{2}'", dir, file, "\"");
+            using (MySqlCommand cmd = new MySqlCommand(strCmd, conn))
+            {
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
+            }*/
+            MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
+            bulk.TableName = "product_descriptions";
+            bulk.FieldTerminator = ",";
+            bulk.FieldQuotationOptional = false;
+            bulk.FieldQuotationCharacter = '"';
+            bulk.CharacterSet = "LATIN1";
+            bulk.FileName = dir + file;
+            bulk.Local = true;
+            bulk.Load();
         }
 
-        static void ImportProductFeaturesToDatabase(NpgsqlConnection conn)
+        static void ImportProductFeatures(MySqlConnection conn)
         {
             var dir = Directory.GetCurrentDirectory();
-            string file = @".\spex\EN_US_B_productfeaturebullets.csv";
+            string file = @"\spex\EN_US_B_productdescriptions.csv";
 
-            string query_cmd = String.Format(@"COPY product_featurebullets FROM '{1}{0}' DELIMITER ',' ESCAPE '\' CSV HEADER;", file, dir);
-
-            using (var command = new NpgsqlCommand("Set client_encoding = 'WIN1252';", conn))
+            using (MySqlCommand cmd = new MySqlCommand("DROP TABLE IF EXISTS product_featurebullets", conn))
             {
-                command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
 
-            using (var command = new NpgsqlCommand(query_cmd, conn))
+            //Create the TABLE
+            using (MySqlCommand cmd = new MySqlCommand("CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, text TEXT, modifieddate TIMESTAMP);", conn))
             {
-                command.ExecuteNonQuery();
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
             }
+
+            MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
+            bulk.TableName = "product_featurebullets";
+            bulk.FieldTerminator = ",";
+            bulk.FieldQuotationOptional = false;
+            bulk.FieldQuotationCharacter = '"';
+            bulk.CharacterSet = "LATIN1";
+            bulk.FileName = dir + file;
+            bulk.Local = true;
+            bulk.Load();
         }
     }
 }
