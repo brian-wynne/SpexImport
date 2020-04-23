@@ -7,15 +7,7 @@ using System.IO;
 using System.Net;
 using System.IO.Compression;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using MySql.Data;
 using MySql.Data.MySqlClient;
-using Microsoft.VisualBasic.FileIO;
-using System.Configuration;
-using System.Collections.Specialized;
 using IniParser;
 using IniParser.Model;
 
@@ -197,7 +189,7 @@ namespace SpexImport
             catch (Exception ex)
             {
                 Console.WriteLine("[MySQL] Connection was NOT established to MySQL");
-                Console.WriteLine(ex.ToString());
+                //Console.WriteLine(ex.ToString());
             }
             finally
             {
@@ -214,6 +206,13 @@ namespace SpexImport
         {
             var dir = Directory.GetCurrentDirectory();
             string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
+
+            //Set buffer size so it doesn't take forever
+            /*using (MySqlCommand cmd = new MySqlCommand("SET GLOBAL bulk_insert_buffer_size = 1G", conn))
+            {
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
+            }*/
 
             for (int i = 0; i < files.Length; i++)
             {
