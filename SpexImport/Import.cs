@@ -1,4 +1,8 @@
-﻿using System;
+﻿//This program is for importing Etilize Data in to a MySQL Database.
+//It will download the necessary files from FTP, extract them, and import the .csv files to the Database
+//@Author: Brian Wynne
+
+using System;
 using System.IO;
 using System.Net;
 using System.IO.Compression;
@@ -10,11 +14,9 @@ using System.Threading.Tasks;
 using MySql.Data;
 using MySql.Data.MySqlClient;
 using Microsoft.VisualBasic.FileIO;
-
 using System.Configuration;
 using System.Collections.Specialized;
 
-// TODO: Download + unzip all needed files, put in to 'SPEX' directory. Cycle through directory and make a call for each file under an iter.
 namespace SpexImport
 {
     class SQLTable
