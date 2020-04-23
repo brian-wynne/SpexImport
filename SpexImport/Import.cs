@@ -16,6 +16,8 @@ using MySql.Data.MySqlClient;
 using Microsoft.VisualBasic.FileIO;
 using System.Configuration;
 using System.Collections.Specialized;
+using IniParser;
+using IniParser.Model;
 
 namespace SpexImport
 {
@@ -29,6 +31,8 @@ namespace SpexImport
     {
         private static string db_host, db_user, db_pass, db_name;
         private static uint db_port;
+
+        private static string ftp_user, ftp_pass;
 
         static void Main(string[] args)
         {
@@ -56,13 +60,37 @@ namespace SpexImport
 
         static void LoadConfiguration()
         {
-            db_host = ConfigurationManager.AppSettings["db_host"];
-            db_user = ConfigurationManager.AppSettings["db_user"];
-            db_pass = ConfigurationManager.AppSettings["db_pass"];
-            db_name = ConfigurationManager.AppSettings["db_name"];
+            var parser = new FileIniDataParser();
+            if (!File.Exists(@".\speximport.ini")) //File not found, write new INI file with defaults
+            {
+                IniData info = new IniData();
 
-            string port = ConfigurationManager.AppSettings["db_port"];
-            db_port = Convert.ToUInt32(port);
+                info["Database"]["host"] = "localhost";
+                info["Database"]["user"] = "root";
+                info["Database"]["pass"] = "";
+                info["Database"]["db"] = "";
+                info["Database"]["port"] = "3306";
+
+                info["FTPCredentials"]["user"] = "";
+                info["FTPCredentials"]["pass"] = "";
+
+                parser.WriteFile(@".\speximport.ini", info);
+                Console.WriteLine("[ERROR] speximport.ini was not found, created new file. Please change from default values");
+                //Thread.Sleep(5 * 1000); //Hang the error message for 5 seconds so it can be read
+                return;
+            }
+
+            IniData data = parser.ReadFile(@".\speximport.ini");
+ 
+            db_host = data["Database"]["host"];
+            db_user = data["Database"]["user"];
+            db_pass = data["Database"]["pass"];
+            db_name = data["Database"]["db"];
+
+            db_port = Convert.ToUInt32(data["Database"]["port"]);
+
+            ftp_user = data["FTPCredentials"]["user"];
+            ftp_pass = data["FTPCredentials"]["pass"];
         }
 
         static void DownloadFromFTP(string url, string filename)
