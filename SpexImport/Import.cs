@@ -3,6 +3,7 @@
 //@Author: Brian Wynne
 
 using System;
+using System.Threading;
 using System.IO;
 using System.Net;
 using System.IO.Compression;
@@ -28,6 +29,7 @@ namespace SpexImport
 
         static void Main(string[] args)
         {
+            DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
 
             Console.Write("[FTP] Downloading basic...");
@@ -67,8 +69,8 @@ namespace SpexImport
                 info["FTPCredentials"]["pass"] = "";
 
                 parser.WriteFile(@".\speximport.ini", info);
-                Console.WriteLine("[ERROR] speximport.ini was not found, created new file. Please change from default values");
-                //Thread.Sleep(5 * 1000); //Hang the error message for 5 seconds so it can be read
+                Console.WriteLine("[ERROR] speximport.ini was not found, created new file. Please change from default values before running this...");
+                Thread.Sleep(5 * 1000); //Hang the error message for 5 seconds so it can be read
                 return;
             }
 
@@ -186,10 +188,11 @@ namespace SpexImport
                 Console.WriteLine("[MySQL] Establishing connection to MySQL");
                 conn.Open();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Console.WriteLine("[MySQL] Connection was NOT established to MySQL");
-                //Console.WriteLine(ex.ToString());
+                Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
+                return;
             }
             finally
             {
@@ -204,15 +207,8 @@ namespace SpexImport
 
         static void ParseSpexDirectory(dynamic tables, MySqlConnection conn)
         {
-            var dir = Directory.GetCurrentDirectory();
+            string dir = Directory.GetCurrentDirectory();
             string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
-
-            //Set buffer size so it doesn't take forever
-            /*using (MySqlCommand cmd = new MySqlCommand("SET GLOBAL bulk_insert_buffer_size = 1G", conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }*/
 
             for (int i = 0; i < files.Length; i++)
             {
@@ -246,8 +242,8 @@ namespace SpexImport
                 cmd.Dispose();
             }
 
-            var dir = Directory.GetCurrentDirectory();
-            //Bulk load CSV file
+            string dir = Directory.GetCurrentDirectory();
+  
             MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
             bulk.TableName = tablename;
             bulk.FieldTerminator = ",";
@@ -261,7 +257,14 @@ namespace SpexImport
 
         static void DeleteSpexDirectory()
         {
-            var dir = Directory.GetCurrentDirectory();
+            string dir = Directory.GetCurrentDirectory();
+
+            if (File.Exists(dir + @"\basic.zip"))
+                File.Delete(dir + @"\basic.zip");
+
+            if (File.Exists(dir + @"\accessories.zip"))
+                File.Delete(dir + @"\accessories.zip");
+
             if (Directory.Exists(dir + @"\spex"))
             {
                 string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
