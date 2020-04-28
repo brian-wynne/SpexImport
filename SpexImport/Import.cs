@@ -39,10 +39,13 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass;
+        private static readonly string BUILD_VERSION = "1.0";
 
         static void Main(string[] args)
         {
             NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS | NativeMethods.ES_SYSTEM_REQUIRED);
+            //Logger("BUILD VERSION:: " + BUILD_VERSION + "\n");
+            Console.Title = "Spex Importer: Ver " + BUILD_VERSION;
 
             DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
@@ -70,7 +73,8 @@ namespace SpexImport
         static void LoadConfiguration()
         {
             var parser = new FileIniDataParser();
-            if (!File.Exists(@".\speximport.ini")) //File not found, write new INI file with defaults
+            string file = @".\..\speximport.ini";
+            if (!File.Exists(file)) //File not found, write new INI file with defaults
             {
                 IniData info = new IniData();
 
@@ -83,13 +87,13 @@ namespace SpexImport
                 info["FTPCredentials"]["user"] = "";
                 info["FTPCredentials"]["pass"] = "";
 
-                parser.WriteFile(@".\speximport.ini", info);
+                parser.WriteFile(file, info);
                 Console.WriteLine("[ERROR] speximport.ini was not found, created new file. Please change from default values before running this...");
                 Thread.Sleep(5 * 1000); //Hang the error message for 5 seconds so it can be read
                 return;
             }
 
-            IniData data = parser.ReadFile(@".\speximport.ini");
+            IniData data = parser.ReadFile(file);
  
             db_host = data["Database"]["host"];
             db_user = data["Database"]["user"];
@@ -104,10 +108,24 @@ namespace SpexImport
 
         static void DownloadFromFTP(string url, string filename)
         {
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create(url);
-            request.Method = WebRequestMethods.Ftp.DownloadFile;
+            FtpWebRequest request;
 
+            try
+            {
+                request = (FtpWebRequest)WebRequest.Create(url);
+            }
+            catch (Exception ex)
+            {
+                Logger("[FTP] Was unable to connect to '" + url + "'\n");
+                Logger(ex + "\n");
+                return;
+            }
+
+            request.Method = WebRequestMethods.Ftp.DownloadFile;
             request.Credentials = new NetworkCredential("dhecsdelta", "8q@Hsb3lta");
+            request.UseBinary = true;
+            //request.Proxy = null;
+            //request.KeepAlive = true;
 
             FtpWebResponse response = (FtpWebResponse)request.GetResponse();
 
@@ -115,10 +133,18 @@ namespace SpexImport
             FileStream file = File.Create(filename);
             byte[] buffer = new byte[32 * 1024];
             int read;
-            
-            while ((read = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+
+            try
             {
-                file.Write(buffer, 0, read);
+                while ((read = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    file.Write(buffer, 0, read);
+                }
+            }
+            catch (WebException ex)
+            {
+                Logger("[FTP] AN error occured while attempting to download " + filename + "\n");
+                Logger(ex + "\n");
             }
 
             file.Close();
@@ -206,8 +232,9 @@ namespace SpexImport
             catch (Exception)
             {
                 Logger("[MySQL] Connection was NOT established to MySQL\n");
-                Logger("Program aboarted...\n");
+                Logger("Program aborted...\n");
                 Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
+                System.Environment.Exit(0);
                 return;
             }
             finally
@@ -295,9 +322,9 @@ namespace SpexImport
             }
         }
 
-        static void Logger(string message, bool newline=false)
+        static void Logger(string message, bool bwrite=false)
         {
-            string file = @".\log.txt";
+            string file = @".\..\log.txt";
 
             using (StreamWriter w = File.AppendText(file))
             {
@@ -305,7 +332,8 @@ namespace SpexImport
                 w.WriteLine(" " + message);
             }
 
-            Console.Write(message);
+            if (bwrite)
+                Console.Write(message);
         }
     }
 }
