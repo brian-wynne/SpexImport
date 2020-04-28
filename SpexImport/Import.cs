@@ -43,9 +43,8 @@ namespace SpexImport
 
         static void Main(string[] args)
         {
+            Console.Title = "Spex Importer: V" + BUILD_VERSION;
             NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS | NativeMethods.ES_SYSTEM_REQUIRED);
-            //Logger("BUILD VERSION:: " + BUILD_VERSION + "\n");
-            Console.Title = "Spex Importer: Ver " + BUILD_VERSION;
 
             DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
@@ -322,13 +321,13 @@ namespace SpexImport
             }
         }
 
-        static void Logger(string message, bool bwrite=false)
+        static void Logger(string message, bool bwrite=true)
         {
             string file = @".\..\log.txt";
 
             using (StreamWriter w = File.AppendText(file))
             {
-                w.Write($"[{DateTime.Now.ToLongTimeString()}|{DateTime.Now.ToLongDateString()}]");
+                w.Write($"[{DateTime.Now.ToShortDateString()} @ {DateTime.Now.ToLongTimeString()}]");
                 w.WriteLine(" " + message);
             }
 
