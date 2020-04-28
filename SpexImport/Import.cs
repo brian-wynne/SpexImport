@@ -11,19 +11,6 @@ using System.Collections.Generic;
 using MySql.Data.MySqlClient;
 using IniParser;
 using IniParser.Model;
-using System.Runtime.InteropServices;
-using Microsoft.VisualBasic.Logging;
-
-//Obtain .dll from C++, import to C#
-//This will prevent the computer from sleeping
-internal static class NativeMethods
-{
-    // Import SetThreadExecutionState Win32 API and necessary flags
-    [DllImport("kernel32.dll")]
-    public static extern uint SetThreadExecutionState(uint esFlags);
-    public const uint ES_CONTINUOUS = 0x80000000;
-    public const uint ES_SYSTEM_REQUIRED = 0x00000001;
-}
 
 namespace SpexImport
 {
@@ -42,26 +29,24 @@ namespace SpexImport
 
         static void Main(string[] args)
         {
-            NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS | NativeMethods.ES_SYSTEM_REQUIRED);
-
             DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
 
-            Logger("[FTP] Downloading basic...");
+            Console.Write("[FTP] Downloading basic...");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
-            Logger(" Done\n");
+            Console.Write(" Done\n");
 
-            Logger("[FTP] Downloading accessories...");
+            Console.Write("[FTP] Downloading accessories...");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
-            Logger(" Done\n");
+            Console.Write(" Done\n");
 
-            Logger("[FTP] Extracting basic.zip...");
+            Console.Write("[FTP] Extracting basic.zip...");
             UnzipCatalogContents("basic.zip");
-            Logger(" Done\n");
+            Console.Write(" Done\n");
 
-            Logger("[FTP] Extracting accessories.zip...");
+            Console.Write("[FTP] Extracting accessories.zip...");
             UnzipCatalogContents("accessories.zip");
-            Logger(" Done\n");
+            Console.Write(" Done\n");
 
             ConnectToDatabase();
             //System.Environment.Exit(0);
@@ -200,13 +185,12 @@ namespace SpexImport
 
             try
             {
-                Logger("[MySQL] Establishing connection to MySQL\n");
+                Console.WriteLine("[MySQL] Establishing connection to MySQL");
                 conn.Open();
             }
             catch (Exception)
             {
-                Logger("[MySQL] Connection was NOT established to MySQL\n");
-                Logger("Program aboarted...\n");
+                Console.WriteLine("[MySQL] Connection was NOT established to MySQL");
                 Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
                 return;
             }
@@ -215,7 +199,7 @@ namespace SpexImport
                 ParseSpexDirectory(tables, conn);
 
                 conn.Close();
-                Logger("[MySQL] Connection closed\n");
+                Console.WriteLine("[MySQL] Connection closed");
             }
 
             DeleteSpexDirectory();
@@ -233,9 +217,9 @@ namespace SpexImport
                 {
                     if (sqldata.Value.Filename == file)
                     {
-                        Logger("[MySQL] Importing " + file + "...");
+                        Console.Write("[MySQL] Importing " + file + "...");
                         ImportSpexData(conn, sqldata.Key, sqldata.Value);
-                        Logger(" Done\n");
+                        Console.Write(" Done\n");
                         break;
                     }
                 }
@@ -293,19 +277,6 @@ namespace SpexImport
 
                 Directory.Delete(dir + @"\spex");
             }
-        }
-
-        static void Logger(string message, bool newline=false)
-        {
-            string file = @".\log.txt";
-
-            using (StreamWriter w = File.AppendText(file))
-            {
-                w.Write($"[{DateTime.Now.ToLongTimeString()}|{DateTime.Now.ToLongDateString()}]");
-                w.WriteLine(" " + message);
-            }
-
-            Console.Write(message);
         }
     }
 }
