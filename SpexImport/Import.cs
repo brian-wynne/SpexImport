@@ -12,7 +12,6 @@ using MySql.Data.MySqlClient;
 using IniParser;
 using IniParser.Model;
 using System.Runtime.InteropServices;
-using Microsoft.VisualBasic.Logging;
 
 //Obtain .dll from C++, import to C#
 //This will prevent the computer from sleeping
@@ -39,7 +38,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass;
-        private static readonly string BUILD_VERSION = "1.0";
+        private static readonly string BUILD_VERSION = "1.01";
 
         static void Main(string[] args)
         {
@@ -50,16 +49,10 @@ namespace SpexImport
             LoadConfiguration();
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
-            Logger(" Done\n");
-
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
-            Logger(" Done\n");
 
             UnzipCatalogContents("basic.zip");
-            Logger(" Done\n");
-
             UnzipCatalogContents("accessories.zip");
-            Logger(" Done\n");
 
             ConnectToDatabase();
             //System.Environment.Exit(0);
@@ -159,6 +152,8 @@ namespace SpexImport
 
             file.Close();
             response.Close();
+
+            Logger(" Done\n");
         }
 
         static void UnzipCatalogContents(string file)
@@ -172,10 +167,13 @@ namespace SpexImport
             {
                 ZipFile.ExtractToDirectory(zipPath, extractPath);
                 File.Delete(Directory.GetCurrentDirectory() + @"\" + file);
+
+                Logger(" Done\n");
                 return;
             }
 
             Logger("[FTP] Unable to extract " + file + "\n");
+            Logger(" Done\n");
         }
 
         static void ConnectToDatabase()
