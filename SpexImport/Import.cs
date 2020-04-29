@@ -49,19 +49,15 @@ namespace SpexImport
             DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
 
-            Logger("[FTP] Downloading basic...");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
             Logger(" Done\n");
 
-            Logger("[FTP] Downloading accessories...");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
             Logger(" Done\n");
 
-            Logger("[FTP] Extracting basic.zip...");
             UnzipCatalogContents("basic.zip");
             Logger(" Done\n");
 
-            Logger("[FTP] Extracting accessories.zip...");
             UnzipCatalogContents("accessories.zip");
             Logger(" Done\n");
 
@@ -87,8 +83,9 @@ namespace SpexImport
                 info["FTPCredentials"]["pass"] = "";
 
                 parser.WriteFile(file, info);
-                Console.WriteLine("[ERROR] speximport.ini was not found, created new file. Please change from default values before running this...");
+                Console.WriteLine("[INI] speximport.ini was not found, created new file. Please change from default values before running this...");
                 Thread.Sleep(5 * 1000); //Hang the error message for 5 seconds so it can be read
+                System.Environment.Exit(0);
                 return;
             }
 
@@ -103,10 +100,14 @@ namespace SpexImport
 
             ftp_user = data["FTPCredentials"]["user"];
             ftp_pass = data["FTPCredentials"]["pass"];
+
+            Logger("[INI] Configuration has been loaded\n");
         }
 
         static void DownloadFromFTP(string url, string filename)
         {
+            Logger("[FTP] Downloading " + filename + "...");
+
             FtpWebRequest request;
 
             try
@@ -120,24 +121,33 @@ namespace SpexImport
                 return;
             }
 
-            request.Method = WebRequestMethods.Ftp.DownloadFile;
             request.Credentials = new NetworkCredential("dhecsdelta", "8q@Hsb3lta");
             request.UseBinary = true;
-            //request.Proxy = null;
-            //request.KeepAlive = true;
+            request.UsePassive = true;
+            request.Proxy = null;
+            request.KeepAlive = true;
+            request.Method = WebRequestMethods.Ftp.DownloadFile;
 
             FtpWebResponse response = (FtpWebResponse)request.GetResponse();
 
             Stream responseStream = response.GetResponseStream();
             FileStream file = File.Create(filename);
+            
             byte[] buffer = new byte[32 * 1024];
             int read;
+            int total = 0;
+
+            Console.Write("\n");
 
             try
             {
                 while ((read = responseStream.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     file.Write(buffer, 0, read);
+
+                    total += read;
+                    //var progress = (total) / (totalbytes);
+                    Console.Write("\r{0} MB   ", (total/1000000));
                 }
             }
             catch (WebException ex)
@@ -150,13 +160,21 @@ namespace SpexImport
             response.Close();
         }
 
-        static void UnzipCatalogContents(string folder)
+        static void UnzipCatalogContents(string file)
         {
-            string zipPath = @".\" + folder;
+            Logger("[FTP] Extracting " + file + "...");
+
+            string zipPath = @".\" + file;
             string extractPath = @".\spex";
 
-            ZipFile.ExtractToDirectory(zipPath, extractPath);
-            File.Delete(Directory.GetCurrentDirectory() + @"\" + folder);
+            if (File.Exists(zipPath))
+            {
+                ZipFile.ExtractToDirectory(zipPath, extractPath);
+                File.Delete(Directory.GetCurrentDirectory() + @"\" + file);
+                return;
+            }
+
+            Logger("[FTP] Unable to extract " + file + "\n");
         }
 
         static void ConnectToDatabase()
@@ -250,6 +268,13 @@ namespace SpexImport
         static void ParseSpexDirectory(dynamic tables, MySqlConnection conn)
         {
             string dir = Directory.GetCurrentDirectory();
+
+            if (!Directory.Exists(dir + @"\spex"))
+            {
+                Logger("No directory found for 'spex' folder, aborting");
+                return;
+            }
+
             string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
 
             for (int i = 0; i < files.Length; i++)
@@ -321,7 +346,7 @@ namespace SpexImport
             }
         }
 
-        static void Logger(string message, bool bwrite=true)
+        static void Logger(string message, bool bprint=true)
         {
             string file = @".\..\log.txt";
 
@@ -331,7 +356,7 @@ namespace SpexImport
                 w.WriteLine(" " + message);
             }
 
-            if (bwrite)
+            if (bprint)
                 Console.Write(message);
         }
     }
