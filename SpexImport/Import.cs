@@ -101,7 +101,8 @@ namespace SpexImport
             ftp_user = data["FTPCredentials"]["user"];
             ftp_pass = data["FTPCredentials"]["pass"];
 
-            Logger("[INI] Configuration has been loaded\n");
+            Logger("[INI] Configuration has been loaded: \n");
+            //Console.WriteLine(data + "\n");
         }
 
         static void DownloadFromFTP(string url, string filename)
@@ -150,10 +151,10 @@ namespace SpexImport
                     Console.Write("\r{0} MB   ", (total/1000000));
                 }
             }
-            catch (WebException ex)
+            catch (WebException)
             {
-                Logger("[FTP] AN error occured while attempting to download " + filename + "\n");
-                Logger(ex + "\n");
+                Logger("\n[FTP] An error occured... ");
+                //Logger(ex + "\n");
             }
 
             file.Close();
@@ -256,6 +257,13 @@ namespace SpexImport
             }
             finally
             {
+                //Create database if not exists
+                using (MySqlCommand cmd = new MySqlCommand("CREATE DATABASE IF NOT EXISTS spex", conn))
+                {
+                    cmd.ExecuteNonQuery();
+                    cmd.Dispose();
+                }
+
                 ParseSpexDirectory(tables, conn);
 
                 conn.Close();
@@ -319,6 +327,8 @@ namespace SpexImport
             bulk.CharacterSet = "LATIN1";
             bulk.FileName = dir + @"\spex\" + values.Filename;
             bulk.Local = true;
+            //bulk.ConflictOption = MySqlBulkLoaderConflictOption.Replace
+            bulk.NumberOfLinesToSkip = 1;
             bulk.Load();
         }
 
