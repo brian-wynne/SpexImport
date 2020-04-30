@@ -55,7 +55,8 @@ namespace SpexImport
             UnzipCatalogContents("accessories.zip");
 
             ConnectToDatabase();
-            //System.Environment.Exit(0);
+
+            System.Environment.Exit(0);
         }
 
         static void LoadConfiguration()
@@ -195,7 +196,7 @@ namespace SpexImport
                 { "product_descriptions", new SQLTable
                     {
                         Filename = "EN_US_B_productdescriptions.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid VARCHAR(100) NOT NULL, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid INT, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));"
                     }
                 },
                 { "product_featurebullets", new SQLTable
