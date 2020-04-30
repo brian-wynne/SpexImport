@@ -39,7 +39,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass;
-        private static readonly string BUILD_VERSION = "1.01";
+        private static readonly string BUILD_VERSION = "1.02";
 
         static void Main(string[] args)
         {
@@ -214,7 +214,7 @@ namespace SpexImport
                 { "product_featurebullets", new SQLTable
                     {
                         Filename = "EN_US_B_productfeaturebullets.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, unknownid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (uniqueid BIGINT, productid INT, localeid SMALLINT, orderid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
                     }
                 },
                 { "product_locales", new SQLTable
