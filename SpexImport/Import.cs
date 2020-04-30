@@ -12,6 +12,7 @@ using MySql.Data.MySqlClient;
 using IniParser;
 using IniParser.Model;
 using System.Runtime.InteropServices;
+using System.Net.Sockets;
 
 //Obtain .dll from C++, import to C#
 //This will prevent the computer from sleeping
@@ -123,11 +124,22 @@ namespace SpexImport
             request.KeepAlive = true;
             request.Method = WebRequestMethods.Ftp.DownloadFile;
 
-            FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+            //FtpWebResponse response = (FtpWebResponse)request.GetResponse();
+            FtpWebResponse response;
+
+            try
+            {
+                response = (FtpWebResponse)request.GetResponse();
+            }
+            catch (Exception)
+            {
+                Logger("[FTP] An unexpected error has occured.");
+                return;
+            }
 
             Stream responseStream = response.GetResponseStream();
             FileStream file = File.Create(filename);
-            
+
             byte[] buffer = new byte[32 * 1024];
             int read;
             int total = 0;
@@ -202,7 +214,7 @@ namespace SpexImport
                 { "product_featurebullets", new SQLTable
                     {
                         Filename = "EN_US_B_productfeaturebullets.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (productid INT, ordernumber SMALLINT, localeid SMALLINT, unknownid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
                     }
                 },
                 { "product_locales", new SQLTable
@@ -321,12 +333,13 @@ namespace SpexImport
             MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
             bulk.TableName = tablename;
             bulk.FieldTerminator = ",";
-            bulk.FieldQuotationOptional = false;
+            bulk.FieldQuotationOptional = true;
             bulk.FieldQuotationCharacter = '"';
+            bulk.EscapeCharacter = '\\';
+            bulk.LineTerminator = "\r\n";
             bulk.CharacterSet = "LATIN1";
             bulk.FileName = dir + @"\spex\" + values.Filename;
             bulk.Local = true;
-            //bulk.ConflictOption = MySqlBulkLoaderConflictOption.Replace
             bulk.NumberOfLinesToSkip = 1;
             bulk.Load();
         }
