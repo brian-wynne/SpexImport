@@ -31,6 +31,7 @@ namespace SpexImport
     {
         public string Filename { get; set; }
         public string QueryCmd { get; set; }
+        public string IndexQueryCmd { get; set; }
     }
 
     class Import
@@ -196,49 +197,56 @@ namespace SpexImport
                 { "product", new SQLTable
                     {
                         Filename = "EN_US_B_product.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));",
+                        IndexQueryCmd = "CREATE UNIQUE INDEX product_id ON {}(productid);"
                     }
                 },
                 { "product_attributes", new SQLTable
                     {
                         Filename = "EN_US_B_productattributes.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_attributes (productid INT, attributeid BIGINT, setnumber SMALLINT, text TEXT, absolutevalue DOUBLE, unitid INT, isabsolute SMALLINT, isactive SMALLINT, localeid INT, type INT);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_attributes (productid INT, attributeid BIGINT, setnumber SMALLINT, text TEXT, absolutevalue DOUBLE, unitid INT, isabsolute SMALLINT, isactive SMALLINT, localeid INT, type INT);",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 },
                 { "product_descriptions", new SQLTable
                     {
                         Filename = "EN_US_B_productdescriptions.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid INT, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid INT, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 },
                 { "product_featurebullets", new SQLTable
                     {
                         Filename = "EN_US_B_productfeaturebullets.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (uniqueid BIGINT, productid INT, localeid SMALLINT, orderid SMALLINT, text TEXT, modifieddate TIMESTAMP);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (uniqueid BIGINT, productid INT, localeid SMALLINT, orderid SMALLINT, text TEXT, modifieddate TIMESTAMP);",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 },
                 { "product_locales", new SQLTable
                     {
                         Filename = "EN_US_B_productlocales.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_locales (productid INT, isactive CHAR(1), published TINYTEXT, PRIMARY KEY(productid));"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_locales (productid INT, isactive CHAR(1), published TINYTEXT, PRIMARY KEY(productid));",
                     }
                 },
                 {  "product_accessories", new SQLTable
                     {
                         Filename = "EN_US_A_productaccessories.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_accessories (productid INT, accessoryid INT, localeid SMALLINT);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_accessories (productid INT, accessoryid INT, localeid SMALLINT);",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 },
                 {  "search_attributes", new SQLTable
                     {
                         Filename = "EN_US_B_searchattributes.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS search_attributes (productid INT, categoryid INT, unknownid INT, isactive SMALLINT, localeid SMALLINT);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS search_attributes (productid INT, categoryid INT, unknownid INT, isactive SMALLINT, localeid SMALLINT);",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 },
                 {  "product_keywords", new SQLTable
                     {
                         Filename = "EN_US_B_productkeywords.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_keywords (productid INT, text TEXT, localeid SMALLINT);"
+                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_keywords (productid INT, text TEXT, localeid SMALLINT);",
+                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
                     }
                 }
             };
@@ -323,6 +331,13 @@ namespace SpexImport
 
             //Create the TABLE
             using (MySqlCommand cmd = new MySqlCommand(values.QueryCmd, conn))
+            {
+                cmd.ExecuteNonQuery();
+                cmd.Dispose();
+            }
+
+            //Run index query
+            using (MySqlCommand cmd = new MySqlCommand(values.IndexQueryCmd, conn))
             {
                 cmd.ExecuteNonQuery();
                 cmd.Dispose();
