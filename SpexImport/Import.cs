@@ -27,20 +27,13 @@ internal static class NativeMethods
 
 namespace SpexImport
 {
-    class SQLTable
-    {
-        public string Filename { get; set; }
-        public string QueryCmd { get; set; }
-        public string IndexQueryCmd { get; set; }
-    }
-
     class Import
     {
         private static string db_host, db_user, db_pass, db_name;
         private static uint db_port;
 
-        private static string ftp_user, ftp_pass;
-        private static readonly string BUILD_VERSION = "1.02";
+        private static string ftp_user, ftp_pass, ftp_url, ftp_files;
+        private static readonly string BUILD_VERSION = "1.03";
 
         static void Main(string[] args)
         {
@@ -50,12 +43,14 @@ namespace SpexImport
             DeleteSpexDirectory(); //This method is for cleanup at the end, but if there were any issues it will the cleanup at the beginning
             LoadConfiguration();
 
+            //TODO: Add this to loop from string of the ini file
+
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
 
             UnzipCatalogContents("basic.zip");
             UnzipCatalogContents("accessories.zip");
-
+            
             ConnectToDatabase();
 
             System.Environment.Exit(0);
@@ -77,6 +72,8 @@ namespace SpexImport
 
                 info["FTPCredentials"]["user"] = "";
                 info["FTPCredentials"]["pass"] = "";
+                info["FTPCredentials"]["dir"] = "";
+                info["FTPCredentials"]["files"] = "";
 
                 parser.WriteFile(file, info);
                 Console.WriteLine("[INI] speximport.ini was not found, created new file. Please change from default values before running this...");
@@ -96,6 +93,8 @@ namespace SpexImport
 
             ftp_user = data["FTPCredentials"]["user"];
             ftp_pass = data["FTPCredentials"]["pass"];
+            ftp_url  = data["FTPCredentials"]["url"];
+            ftp_files = data["FTPCredentials"]["files"];
 
             Logger("[INI] Configuration has been loaded: \n");
             //Console.WriteLine(data + "\n");
@@ -110,6 +109,12 @@ namespace SpexImport
             try
             {
                 request = (FtpWebRequest)WebRequest.Create(url);
+                request.Credentials = new NetworkCredential("dhecsdelta", "8q@Hsb3lta");
+                request.UseBinary = true;
+                request.UsePassive = true;
+                request.Proxy = null;
+                request.KeepAlive = true;
+                request.Method = WebRequestMethods.Ftp.DownloadFile;
             }
             catch (Exception ex)
             {
@@ -117,14 +122,6 @@ namespace SpexImport
                 Logger(ex + "\n");
                 return;
             }
-
-            request.Credentials = new NetworkCredential("dhecsdelta", "8q@Hsb3lta");
-            request.UseBinary = true;
-            request.UsePassive = true;
-            request.Proxy = null;
-            request.KeepAlive = true;
-            request.Method = WebRequestMethods.Ftp.DownloadFile;
-
             //FtpWebResponse response = (FtpWebResponse)request.GetResponse();
             FtpWebResponse response;
 
@@ -192,63 +189,16 @@ namespace SpexImport
 
         static void ConnectToDatabase()
         {
-            var tables = new Dictionary<string, SQLTable>()
+            var tables = new Dictionary<string, string>()
             {
-                { "product", new SQLTable
-                    {
-                        Filename = "EN_US_B_product.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product (productid INT NOT NULL, mfgid VARCHAR(16), mfgpn VARCHAR(128) NOT NULL, categoryid INT, is_active CHAR(1), equivalency TEXT, create_date TIMESTAMP, modify_date TIMESTAMP, last_update TIMESTAMP, PRIMARY KEY(productid, mfgpn));",
-                        IndexQueryCmd = "CREATE UNIQUE INDEX product_id ON {}(productid);"
-                    }
-                },
-                { "product_attributes", new SQLTable
-                    {
-                        Filename = "EN_US_B_productattributes.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_attributes (productid INT, attributeid BIGINT, setnumber SMALLINT, text TEXT, absolutevalue DOUBLE, unitid INT, isabsolute SMALLINT, isactive SMALLINT, localeid INT, type INT);",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                },
-                { "product_descriptions", new SQLTable
-                    {
-                        Filename = "EN_US_B_productdescriptions.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_descriptions (productid INT, description TEXT, isdefault CHAR(1), type CHAR(1), localeid CHAR(1));",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                },
-                { "product_featurebullets", new SQLTable
-                    {
-                        Filename = "EN_US_B_productfeaturebullets.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_featurebullets (uniqueid BIGINT, productid INT, localeid SMALLINT, orderid SMALLINT, text TEXT, modifieddate TIMESTAMP);",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                },
-                { "product_locales", new SQLTable
-                    {
-                        Filename = "EN_US_B_productlocales.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_locales (productid INT, isactive CHAR(1), published TINYTEXT, PRIMARY KEY(productid));",
-                    }
-                },
-                {  "product_accessories", new SQLTable
-                    {
-                        Filename = "EN_US_A_productaccessories.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_accessories (productid INT, accessoryid INT, localeid SMALLINT);",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                },
-                {  "search_attributes", new SQLTable
-                    {
-                        Filename = "EN_US_B_searchattributes.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS search_attributes (productid INT, categoryid INT, unknownid INT, isactive SMALLINT, localeid SMALLINT);",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                },
-                {  "product_keywords", new SQLTable
-                    {
-                        Filename = "EN_US_B_productkeywords.csv",
-                        QueryCmd = "CREATE TABLE IF NOT EXISTS product_keywords (productid INT, text TEXT, localeid SMALLINT);",
-                        IndexQueryCmd = "CREATE INDEX product_id ON {}(productid);"
-                    }
-                }
+                { "EN_US_B_product.csv", "product" },
+                { "EN_US_B_productattributes.csv", "product_attributes" },
+                { "EN_US_B_productdescriptions.csv", "product_descriptions" },
+                { "EN_US_B_productfeaturebullets.csv", "product_featurebullets" },
+                { "EN_US_B_productlocales.csv", "product_locales" },
+                { "EN_US_A_productaccessories.csv", "product_accessories" },
+                { "EN_US_B_searchattributes.csv", "search_attributes" },
+                { "EN_US_B_productkeywords.csv", "product_keywords" }
             };
 
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
@@ -276,12 +226,11 @@ namespace SpexImport
             }
             finally
             {
-                //Create database if not exists
-                using (MySqlCommand cmd = new MySqlCommand("CREATE DATABASE IF NOT EXISTS spex", conn))
-                {
-                    cmd.ExecuteNonQuery();
-                    cmd.Dispose();
-                }
+                //Load init.sql
+                string script = File.ReadAllText(@".\..\init.sql");
+
+                MySqlScript sqlScript = new MySqlScript(conn, script);
+                sqlScript.Execute();
 
                 ParseSpexDirectory(tables, conn);
 
@@ -309,7 +258,7 @@ namespace SpexImport
                 string file = Path.GetFileName(files[i]);
                 foreach (var sqldata in tables)
                 {
-                    if (sqldata.Value.Filename == file)
+                    if (sqldata.Key == file)
                     {
                         Logger("[MySQL] Importing " + file + "...");
                         ImportSpexData(conn, sqldata.Key, sqldata.Value);
@@ -320,29 +269,8 @@ namespace SpexImport
             }
         }
 
-        static void ImportSpexData(MySqlConnection conn, string tablename, dynamic values)
+        static void ImportSpexData(MySqlConnection conn, string filename, string tablename)
         {
-            string queryCmd = String.Format("DROP TABLE IF EXISTS {0}", tablename);
-            using (MySqlCommand cmd = new MySqlCommand(queryCmd, conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
-            //Create the TABLE
-            using (MySqlCommand cmd = new MySqlCommand(values.QueryCmd, conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
-            //Run index query
-            using (MySqlCommand cmd = new MySqlCommand(values.IndexQueryCmd, conn))
-            {
-                cmd.ExecuteNonQuery();
-                cmd.Dispose();
-            }
-
             string dir = Directory.GetCurrentDirectory();
   
             MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
@@ -353,7 +281,7 @@ namespace SpexImport
             bulk.EscapeCharacter = '\\';
             bulk.LineTerminator = "\r\n";
             bulk.CharacterSet = "LATIN1";
-            bulk.FileName = dir + @"\spex\" + values.Filename;
+            bulk.FileName = dir + @"\spex\" + filename;
             bulk.Local = true;
             bulk.NumberOfLinesToSkip = 1;
             bulk.Load();

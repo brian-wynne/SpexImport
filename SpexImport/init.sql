@@ -1,3 +1,6 @@
+CREATE DATABASE IF NOT EXISTS spex;
+
+DROP TABLE IF EXISTS product;
 CREATE TABLE IF NOT EXISTS product 
 (
 	productid INT NOT NULL, 
@@ -13,6 +16,7 @@ CREATE TABLE IF NOT EXISTS product
 );
 CREATE UNIQUE INDEX product_id ON product(productid);
 
+DROP TABLE IF EXISTS product_attributes;
 CREATE TABLE IF NOT EXISTS product_attributes 
 (
 	productid INT, 
@@ -28,6 +32,7 @@ CREATE TABLE IF NOT EXISTS product_attributes
 );
 CREATE INDEX product_id ON product_attributes(productid);
 
+DROP TABLE IF EXISTS product_descriptions;
 CREATE TABLE IF NOT EXISTS product_descriptions 
 (
 	productid INT, 
@@ -38,6 +43,7 @@ CREATE TABLE IF NOT EXISTS product_descriptions
 );
 CREATE INDEX product_id ON product_descriptions(productid);
 
+DROP TABLE IF EXISTS product_featurebullets;
 CREATE TABLE IF NOT EXISTS product_featurebullets 
 (
 	uniqueid BIGINT, 
@@ -49,6 +55,7 @@ CREATE TABLE IF NOT EXISTS product_featurebullets
 );
 CREATE INDEX product_id ON product_featurebullets(productid);
 
+DROP TABLE IF EXISTS product_locales;
 CREATE TABLE IF NOT EXISTS product_locales 
 (
 	productid INT, 
@@ -58,6 +65,7 @@ CREATE TABLE IF NOT EXISTS product_locales
 );
 CREATE INDEX product_id ON product_locales(productid);
 
+DROP TABLE IF EXISTS product_accessories;
 CREATE TABLE IF NOT EXISTS product_accessories 
 (
 	productid INT, 
@@ -66,6 +74,7 @@ CREATE TABLE IF NOT EXISTS product_accessories
 );
 CREATE INDEX product_id ON product_accessories(productid);
 
+DROP TABLE IF EXISTS search_attributes;
 CREATE TABLE IF NOT EXISTS search_attributes 
 (
 	productid INT, 
@@ -76,6 +85,7 @@ CREATE TABLE IF NOT EXISTS search_attributes
 );
 CREATE INDEX product_id ON search_attributes(productid);
 
+DROP TABLE IF EXISTS product_keywords;
 CREATE TABLE IF NOT EXISTS product_keywords 
 (
 	productid INT, 
