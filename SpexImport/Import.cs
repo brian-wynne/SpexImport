@@ -33,7 +33,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.04";
+        private static readonly string BUILD_VERSION = "1.05";
 
         static void Main(string[] args)
         {
@@ -47,10 +47,12 @@ namespace SpexImport
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/featurebullets/featurebullet_EN_US_current_mysql.zip", "featurebullet.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/EN_US/tax_EN_US_current_mysql.zip", "tax.zip");
 
             UnzipCatalogContents("basic.zip");
             UnzipCatalogContents("accessories.zip");
+            UnzipCatalogContents("featurebullet.zip");
             UnzipCatalogContents("tax.zip");
 
             ConnectToDatabase();
@@ -208,7 +210,10 @@ namespace SpexImport
                 { "EN_US_categorynames.csv", "categorynames" },
                 { "EN_US_headernames.csv", "headernames" },
                 { "EN_US_locales.csv", "locales" },
-                { "EN_US_unitnames.csv", "unitnames" }
+                { "EN_US_unitnames.csv", "unitnames" },
+
+                //featurebullets
+                { "EN_US_F_productfeaturebullets.csv", "product_featurebullets" }
             };
 
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
