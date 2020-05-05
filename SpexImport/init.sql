@@ -93,3 +93,52 @@ CREATE TABLE IF NOT EXISTS product_keywords
 	localeid SMALLINT
 );
 CREATE INDEX product_id ON product_keywords(productid);
+
+
+-- TAX.zip
+DROP TABLE IF EXISTS attributenames;
+CREATE TABLE IF NOT EXISTS attributenames
+(
+	attributeid INT,
+	name TEXT,
+	localeid SMALLINT
+);
+CREATE INDEX attribute_id ON attributenames(attributeid);
+
+DROP TABLE IF EXISTS categorynames;
+CREATE TABLE IF NOT EXISTS categorynames
+(
+	categoryid INT,
+	name TEXT,
+	localeid SMALLINT
+);
+CREATE INDEX category_id ON categorynames(categoryid);
+
+DROP TABLE IF EXISTS headernames;
+CREATE TABLE IF NOT EXISTS headernames
+(
+	headerid INT,
+	name TEXT,
+	localeid SMALLINT
+);
+CREATE INDEX header_id ON headernames(headerid);
+
+DROP TABLE IF EXISTS locales;
+CREATE TABLE IF NOT EXISTS locales 
+(
+	localeid SMALLINT,
+	isactive TINYINT,
+	languagecode VARCHAR(5),
+	countrycode VARCHAR(5),
+	name TEXT
+);
+CREATE INDEX locale_id ON locales(localeid);
+
+DROP TABLE IF EXISTS unitnames;
+CREATE TABLE IF NOT EXISTS unitnames
+(
+	unitid INT,
+	baseunitid INT,
+	multiple DOUBLE
+);
+CREATE INDEX unit_id ON unitnames(unitid);

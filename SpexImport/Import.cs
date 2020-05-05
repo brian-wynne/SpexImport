@@ -33,7 +33,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.03";
+        private static readonly string BUILD_VERSION = "1.04";
 
         static void Main(string[] args)
         {
@@ -47,10 +47,12 @@ namespace SpexImport
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/EN_US/tax_EN_US_current_mysql.zip", "tax.zip");
 
             UnzipCatalogContents("basic.zip");
             UnzipCatalogContents("accessories.zip");
-            
+            UnzipCatalogContents("tax.zip");
+
             ConnectToDatabase();
 
             System.Environment.Exit(0);
@@ -109,7 +111,7 @@ namespace SpexImport
             try
             {
                 request = (FtpWebRequest)WebRequest.Create(url);
-                request.Credentials = new NetworkCredential("dhecsdelta", "8q@Hsb3lta");
+                request.Credentials = new NetworkCredential(ftp_user, ftp_pass);
                 request.UseBinary = true;
                 request.UsePassive = true;
                 request.Proxy = null;
@@ -191,6 +193,7 @@ namespace SpexImport
         {
             var tables = new Dictionary<string, string>()
             {
+                //basic.zip
                 { "EN_US_B_product.csv", "product" },
                 { "EN_US_B_productattributes.csv", "product_attributes" },
                 { "EN_US_B_productdescriptions.csv", "product_descriptions" },
@@ -198,7 +201,14 @@ namespace SpexImport
                 { "EN_US_B_productlocales.csv", "product_locales" },
                 { "EN_US_A_productaccessories.csv", "product_accessories" },
                 { "EN_US_B_searchattributes.csv", "search_attributes" },
-                { "EN_US_B_productkeywords.csv", "product_keywords" }
+                { "EN_US_B_productkeywords.csv", "product_keywords" },
+
+                //tax.zip
+                { "EN_US_attributenames.csv", "attributenames" },
+                { "EN_US_categorynames.csv", "categorynames" },
+                { "EN_US_headernames.csv", "headernames" },
+                { "EN_US_locales.csv", "locales" },
+                { "EN_US_unitnames.csv", "unitnames" }
             };
 
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
