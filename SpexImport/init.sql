@@ -12,11 +12,9 @@ CREATE TABLE IF NOT EXISTS product
 	create_date TIMESTAMP, 
 	modify_date TIMESTAMP, 
 	last_update TIMESTAMP, 
-	PRIMARY KEY(productid, mfgpn)
+	PRIMARY KEY(productid, mfgpn),
+	FOREIGN KEY(categoryid, mfgid)
 );
-CREATE UNIQUE INDEX product_id ON product(productid);
-CREATE INDEX category_id ON product(categoryid);
-CREATE INDEX mfg_pn ON product(mfgpn);
 
 DROP TABLE IF EXISTS productattributes;
 CREATE TABLE IF NOT EXISTS productattributes 
@@ -30,10 +28,9 @@ CREATE TABLE IF NOT EXISTS productattributes
 	isabsolute SMALLINT, 
 	isactive SMALLINT, 
 	localeid INT, 
-	type INT
+	type INT,
+	FOREIGN KEY(productid, attributeid, categoryid, unitid, localeid)
 );
-CREATE INDEX product_id ON productattributes(productid);
-CREATE INDEX attribute_id ON productattributes(attributeid);
 
 DROP TABLE IF EXISTS productdescriptions;
 CREATE TABLE IF NOT EXISTS productdescriptions 
@@ -42,9 +39,9 @@ CREATE TABLE IF NOT EXISTS productdescriptions
 	description TEXT, 
 	isdefault CHAR(1), 
 	type CHAR(1), 
-	localeid CHAR(1)
+	localeid CHAR(1),
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX product_id ON productdescriptions(productid);
 
 DROP TABLE IF EXISTS productfeaturebullets;
 CREATE TABLE IF NOT EXISTS productfeaturebullets 
@@ -54,9 +51,10 @@ CREATE TABLE IF NOT EXISTS productfeaturebullets
 	localeid SMALLINT, 
 	orderid SMALLINT, 
 	text TEXT, 
-	modifieddate TIMESTAMP
+	modifieddate TIMESTAMP,
+	PRIMARY KEY(uniqueid),
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX product_id ON productfeaturebullets(productid);
 
 DROP TABLE IF EXISTS productlocales;
 CREATE TABLE IF NOT EXISTS productlocales 
@@ -64,18 +62,17 @@ CREATE TABLE IF NOT EXISTS productlocales
 	productid INT, 
 	isactive CHAR(1), 
 	published TINYTEXT, 
-	PRIMARY KEY(productid)
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX product_id ON productlocales(productid);
 
 DROP TABLE IF EXISTS productaccessories;
 CREATE TABLE IF NOT EXISTS productaccessories 
 (
 	productid INT, 
 	accessoryid INT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX product_id ON productaccessories(productid);
 
 DROP TABLE IF EXISTS searchattributes;
 CREATE TABLE IF NOT EXISTS searchattributes 
@@ -84,18 +81,18 @@ CREATE TABLE IF NOT EXISTS searchattributes
 	categoryid INT, 
 	unknownid INT, 
 	isactive SMALLINT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid, categoryid, localeid)
 );
-CREATE INDEX product_id ON searchattributes(productid);
 
 DROP TABLE IF EXISTS productkeywords;
 CREATE TABLE IF NOT EXISTS productkeywords 
 (
 	productid INT, 
 	text TEXT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX product_id ON productkeywords(productid);
 
 
 -- TAX.zip
@@ -104,18 +101,19 @@ CREATE TABLE IF NOT EXISTS attributenames
 (
 	attributeid INT,
 	name TEXT,
-	localeid SMALLINT
+	localeid SMALLINT,
+	PRIMARY KEY(attributeid),
+	FOREIGN KEY(localeid)
 );
-CREATE INDEX attribute_id ON attributenames(attributeid);
 
 DROP TABLE IF EXISTS categorynames;
 CREATE TABLE IF NOT EXISTS categorynames
 (
 	categoryid INT,
 	name TEXT,
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid, localeid)
 );
-CREATE INDEX category_id ON categorynames(categoryid);
 
 DROP TABLE IF EXISTS headernames;
 CREATE TABLE IF NOT EXISTS headernames
@@ -124,7 +122,6 @@ CREATE TABLE IF NOT EXISTS headernames
 	name TEXT,
 	localeid SMALLINT
 );
-CREATE INDEX header_id ON headernames(headerid);
 
 DROP TABLE IF EXISTS locales;
 CREATE TABLE IF NOT EXISTS locales 
@@ -133,15 +130,15 @@ CREATE TABLE IF NOT EXISTS locales
 	isactive TINYINT,
 	languagecode VARCHAR(5),
 	countrycode VARCHAR(5),
-	name TEXT
+	name TEXT,
+	PRIMARY KEY(localeid)
 );
-CREATE INDEX locale_id ON locales(localeid);
 
 DROP TABLE IF EXISTS unitnames;
 CREATE TABLE IF NOT EXISTS unitnames
 (
 	unitid INT,
 	baseunitid INT,
-	multiple DOUBLE
+	multiple DOUBLE,
+	PRIMARY KEY(unitid)
 );
-CREATE INDEX unit_id ON unitnames(unitid);
