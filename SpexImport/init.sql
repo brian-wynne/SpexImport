@@ -15,9 +15,11 @@ CREATE TABLE IF NOT EXISTS product
 	PRIMARY KEY(productid, mfgpn)
 );
 CREATE UNIQUE INDEX product_id ON product(productid);
+CREATE INDEX category_id ON product(categoryid);
+CREATE INDEX mfg_pn ON product(mfgpn);
 
-DROP TABLE IF EXISTS product_attributes;
-CREATE TABLE IF NOT EXISTS product_attributes 
+DROP TABLE IF EXISTS productattributes;
+CREATE TABLE IF NOT EXISTS productattributes 
 (
 	productid INT, 
 	attributeid BIGINT, 
@@ -30,10 +32,11 @@ CREATE TABLE IF NOT EXISTS product_attributes
 	localeid INT, 
 	type INT
 );
-CREATE INDEX product_id ON product_attributes(productid);
+CREATE INDEX product_id ON productattributes(productid);
+CREATE INDEX attribute_id ON productattributes(attributeid);
 
-DROP TABLE IF EXISTS product_descriptions;
-CREATE TABLE IF NOT EXISTS product_descriptions 
+DROP TABLE IF EXISTS productdescriptions;
+CREATE TABLE IF NOT EXISTS productdescriptions 
 (
 	productid INT, 
 	description TEXT, 
@@ -41,10 +44,10 @@ CREATE TABLE IF NOT EXISTS product_descriptions
 	type CHAR(1), 
 	localeid CHAR(1)
 );
-CREATE INDEX product_id ON product_descriptions(productid);
+CREATE INDEX product_id ON productdescriptions(productid);
 
-DROP TABLE IF EXISTS product_featurebullets;
-CREATE TABLE IF NOT EXISTS product_featurebullets 
+DROP TABLE IF EXISTS productfeaturebullets;
+CREATE TABLE IF NOT EXISTS productfeaturebullets 
 (
 	uniqueid BIGINT, 
 	productid INT, 
@@ -53,29 +56,29 @@ CREATE TABLE IF NOT EXISTS product_featurebullets
 	text TEXT, 
 	modifieddate TIMESTAMP
 );
-CREATE INDEX product_id ON product_featurebullets(productid);
+CREATE INDEX product_id ON productfeaturebullets(productid);
 
-DROP TABLE IF EXISTS product_locales;
-CREATE TABLE IF NOT EXISTS product_locales 
+DROP TABLE IF EXISTS productlocales;
+CREATE TABLE IF NOT EXISTS productlocales 
 (
 	productid INT, 
 	isactive CHAR(1), 
 	published TINYTEXT, 
 	PRIMARY KEY(productid)
 );
-CREATE INDEX product_id ON product_locales(productid);
+CREATE INDEX product_id ON productlocales(productid);
 
-DROP TABLE IF EXISTS product_accessories;
-CREATE TABLE IF NOT EXISTS product_accessories 
+DROP TABLE IF EXISTS productaccessories;
+CREATE TABLE IF NOT EXISTS productaccessories 
 (
 	productid INT, 
 	accessoryid INT, 
 	localeid SMALLINT
 );
-CREATE INDEX product_id ON product_accessories(productid);
+CREATE INDEX product_id ON productaccessories(productid);
 
-DROP TABLE IF EXISTS search_attributes;
-CREATE TABLE IF NOT EXISTS search_attributes 
+DROP TABLE IF EXISTS searchattributes;
+CREATE TABLE IF NOT EXISTS searchattributes 
 (
 	productid INT, 
 	categoryid INT, 
@@ -83,16 +86,16 @@ CREATE TABLE IF NOT EXISTS search_attributes
 	isactive SMALLINT, 
 	localeid SMALLINT
 );
-CREATE INDEX product_id ON search_attributes(productid);
+CREATE INDEX product_id ON searchattributes(productid);
 
-DROP TABLE IF EXISTS product_keywords;
-CREATE TABLE IF NOT EXISTS product_keywords 
+DROP TABLE IF EXISTS productkeywords;
+CREATE TABLE IF NOT EXISTS productkeywords 
 (
 	productid INT, 
 	text TEXT, 
 	localeid SMALLINT
 );
-CREATE INDEX product_id ON product_keywords(productid);
+CREATE INDEX product_id ON productkeywords(productid);
 
 
 -- TAX.zip

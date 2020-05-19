@@ -33,7 +33,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.05";
+        private static readonly string BUILD_VERSION = "1.06";
 
         static void Main(string[] args)
         {
@@ -47,7 +47,7 @@ namespace SpexImport
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
-            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/featurebullets/featurebullet_EN_US_current_mysql.zip", "featurebullet.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/featurebullet/featurebullet_EN_US_current_mysql.zip", "featurebullet.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/EN_US/tax_EN_US_current_mysql.zip", "tax.zip");
 
             UnzipCatalogContents("basic.zip");
@@ -197,13 +197,13 @@ namespace SpexImport
             {
                 //basic.zip
                 { "EN_US_B_product.csv", "product" },
-                { "EN_US_B_productattributes.csv", "product_attributes" },
-                { "EN_US_B_productdescriptions.csv", "product_descriptions" },
-                { "EN_US_B_productfeaturebullets.csv", "product_featurebullets" },
-                { "EN_US_B_productlocales.csv", "product_locales" },
-                { "EN_US_A_productaccessories.csv", "product_accessories" },
-                { "EN_US_B_searchattributes.csv", "search_attributes" },
-                { "EN_US_B_productkeywords.csv", "product_keywords" },
+                { "EN_US_B_productattributes.csv", "productattributes" },
+                { "EN_US_B_productdescriptions.csv", "productdescriptions" },
+                { "EN_US_B_productfeaturebullets.csv", "productfeaturebullets" },
+                { "EN_US_B_productlocales.csv", "productlocales" },
+                { "EN_US_A_productaccessories.csv", "productaccessories" },
+                { "EN_US_B_searchattributes.csv", "searchattributes" },
+                { "EN_US_B_productkeywords.csv", "productkeywords" },
 
                 //tax.zip
                 { "EN_US_attributenames.csv", "attributenames" },
@@ -213,7 +213,7 @@ namespace SpexImport
                 { "EN_US_unitnames.csv", "unitnames" },
 
                 //featurebullets
-                { "EN_US_F_productfeaturebullets.csv", "product_featurebullets" }
+                { "EN_US_F_productfeaturebullets.csv", "productfeaturebullets" }
             };
 
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
@@ -239,19 +239,25 @@ namespace SpexImport
                 System.Environment.Exit(0);
                 return;
             }
-            finally
+
+            //Load init.sql
+            try
             {
-                //Load init.sql
                 string script = File.ReadAllText(@".\..\init.sql");
 
                 MySqlScript sqlScript = new MySqlScript(conn, script);
                 sqlScript.Execute();
-
-                ParseSpexDirectory(tables, conn);
-
-                conn.Close();
-                Logger("[MySQL] Connection closed\n");
             }
+            catch (Exception)
+            {
+                Logger("[MySQL] An error occured when attempting to run init.sql");
+                return;
+            }
+
+            ParseSpexDirectory(tables, conn);
+
+            conn.Close();
+            Logger("[MySQL] Connection closed\n");
 
             DeleteSpexDirectory();
         }
