@@ -1,6 +1,26 @@
-CREATE DATABASE IF NOT EXISTS spex;
+DROP DATABASE IF EXISTS spex;
+CREATE DATABASE spex;
+USE spex;
 
-DROP TABLE IF EXISTS product;
+-- Index tables
+CREATE TABLE IF NOT EXISTS locales 
+(
+	localeid SMALLINT,
+	isactive TINYINT,
+	languagecode VARCHAR(5),
+	countrycode VARCHAR(5),
+	name TEXT,
+	PRIMARY KEY(localeid)
+);
+
+CREATE TABLE IF NOT EXISTS unitnames
+(
+	unitid INT,
+	baseunitid INT,
+	multiple DOUBLE,
+	PRIMARY KEY(unitid)
+);
+
 CREATE TABLE IF NOT EXISTS product 
 (
 	productid INT NOT NULL, 
@@ -12,38 +32,30 @@ CREATE TABLE IF NOT EXISTS product
 	create_date TIMESTAMP, 
 	modify_date TIMESTAMP, 
 	last_update TIMESTAMP, 
-	PRIMARY KEY(productid, mfgpn),
-	FOREIGN KEY(categoryid, mfgid)
+	PRIMARY KEY(productid)
 );
+CREATE INDEX mfg_pn ON product(mfgpn);
 
-DROP TABLE IF EXISTS productattributes;
-CREATE TABLE IF NOT EXISTS productattributes 
+CREATE TABLE IF NOT EXISTS categorynames
 (
-	productid INT, 
-	attributeid BIGINT, 
-	setnumber SMALLINT, 
-	text TEXT, 
-	absolutevalue DOUBLE, 
-	unitid INT, 
-	isabsolute SMALLINT, 
-	isactive SMALLINT, 
-	localeid INT, 
-	type INT,
-	FOREIGN KEY(productid, attributeid, categoryid, unitid, localeid)
+	categoryid INT,
+	name TEXT,
+	localeid SMALLINT,
+	PRIMARY KEY(categoryid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS productdescriptions;
-CREATE TABLE IF NOT EXISTS productdescriptions 
+ALTER TABLE product ADD FOREIGN KEY (categoryid) REFERENCES categorynames(categoryid);
+
+CREATE TABLE IF NOT EXISTS headernames
 (
-	productid INT, 
-	description TEXT, 
-	isdefault CHAR(1), 
-	type CHAR(1), 
-	localeid CHAR(1),
-	FOREIGN KEY(productid, localeid)
+	headerid INT,
+	name TEXT,
+	localeid SMALLINT,
+	PRIMARY KEY(headerid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS productfeaturebullets;
 CREATE TABLE IF NOT EXISTS productfeaturebullets 
 (
 	uniqueid BIGINT, 
@@ -53,28 +65,67 @@ CREATE TABLE IF NOT EXISTS productfeaturebullets
 	text TEXT, 
 	modifieddate TIMESTAMP,
 	PRIMARY KEY(uniqueid),
-	FOREIGN KEY(productid, localeid)
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS productlocales;
+CREATE TABLE IF NOT EXISTS attributenames
+(
+	attributeid INT,
+	name TEXT,
+	localeid SMALLINT,
+	PRIMARY KEY(attributeid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
+);
+
+-- Non-Index
+
+CREATE TABLE IF NOT EXISTS productattributes 
+(
+	productid INT, 
+	attributeid INT, 
+	setnumber SMALLINT, 
+	text TEXT, 
+	absolutevalue DOUBLE, 
+	unitid INT, 
+	isabsolute SMALLINT, 
+	isactive SMALLINT, 
+	localeid SMALLINT, 
+	type INT,
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid) ON DELETE CASCADE,
+	FOREIGN KEY(unitid) REFERENCES unitnames(unitid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS productdescriptions 
+(
+	productid INT, 
+	description TEXT, 
+	isdefault CHAR(1), 
+	type CHAR(1), 
+	localeid SMALLINT,
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS productlocales 
 (
 	productid INT, 
 	isactive CHAR(1), 
 	published TINYTEXT, 
-	FOREIGN KEY(productid, localeid)
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS productaccessories;
 CREATE TABLE IF NOT EXISTS productaccessories 
 (
 	productid INT, 
 	accessoryid INT, 
 	localeid SMALLINT,
-	FOREIGN KEY(productid, localeid)
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS searchattributes;
 CREATE TABLE IF NOT EXISTS searchattributes 
 (
 	productid INT, 
@@ -82,63 +133,16 @@ CREATE TABLE IF NOT EXISTS searchattributes
 	unknownid INT, 
 	isactive SMALLINT, 
 	localeid SMALLINT,
-	FOREIGN KEY(productid, categoryid, localeid)
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(categoryid) REFERENCES categorynames(categoryid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS productkeywords;
 CREATE TABLE IF NOT EXISTS productkeywords 
 (
 	productid INT, 
 	text TEXT, 
 	localeid SMALLINT,
-	FOREIGN KEY(productid, localeid)
-);
-
-
--- TAX.zip
-DROP TABLE IF EXISTS attributenames;
-CREATE TABLE IF NOT EXISTS attributenames
-(
-	attributeid INT,
-	name TEXT,
-	localeid SMALLINT,
-	PRIMARY KEY(attributeid),
-	FOREIGN KEY(localeid)
-);
-
-DROP TABLE IF EXISTS categorynames;
-CREATE TABLE IF NOT EXISTS categorynames
-(
-	categoryid INT,
-	name TEXT,
-	localeid SMALLINT,
-	FOREIGN KEY(productid, localeid)
-);
-
-DROP TABLE IF EXISTS headernames;
-CREATE TABLE IF NOT EXISTS headernames
-(
-	headerid INT,
-	name TEXT,
-	localeid SMALLINT
-);
-
-DROP TABLE IF EXISTS locales;
-CREATE TABLE IF NOT EXISTS locales 
-(
-	localeid SMALLINT,
-	isactive TINYINT,
-	languagecode VARCHAR(5),
-	countrycode VARCHAR(5),
-	name TEXT,
-	PRIMARY KEY(localeid)
-);
-
-DROP TABLE IF EXISTS unitnames;
-CREATE TABLE IF NOT EXISTS unitnames
-(
-	unitid INT,
-	baseunitid INT,
-	multiple DOUBLE,
-	PRIMARY KEY(unitid)
+	FOREIGN KEY(productid) REFERENCES product(productid) ON DELETE CASCADE,
+	FOREIGN KEY(localeid) REFERENCES locales(localeid) ON DELETE CASCADE
 );
