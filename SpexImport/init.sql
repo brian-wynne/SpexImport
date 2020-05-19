@@ -9,14 +9,16 @@ CREATE TABLE IF NOT EXISTS locales
 	isactive TINYINT,
 	languagecode VARCHAR(5),
 	countrycode VARCHAR(5),
-	name TEXT
+	name TEXT,
+	PRIMARY KEY(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS unitnames
 (
 	unitid INT,
 	baseunitid INT,
-	multiple DOUBLE
+	multiple DOUBLE,
+	PRIMARY KEY(unitid)
 );
 
 CREATE TABLE IF NOT EXISTS product 
@@ -29,21 +31,29 @@ CREATE TABLE IF NOT EXISTS product
 	equivalency TEXT, 
 	create_date TIMESTAMP, 
 	modify_date TIMESTAMP, 
-	last_update TIMESTAMP
+	last_update TIMESTAMP, 
+	PRIMARY KEY(productid)
 );
+CREATE INDEX mfg_pn ON product(mfgpn);
 
 CREATE TABLE IF NOT EXISTS categorynames
 (
 	categoryid INT,
 	name TEXT,
-	localeid SMALLINT
+	localeid SMALLINT,
+	PRIMARY KEY(categoryid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
+
+ALTER TABLE product ADD FOREIGN KEY (categoryid) REFERENCES categorynames(categoryid);
 
 CREATE TABLE IF NOT EXISTS headernames
 (
 	headerid INT,
 	name TEXT,
-	localeid SMALLINT
+	localeid SMALLINT,
+	PRIMARY KEY(headerid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS productfeaturebullets 
@@ -53,14 +63,19 @@ CREATE TABLE IF NOT EXISTS productfeaturebullets
 	localeid SMALLINT, 
 	orderid SMALLINT, 
 	text TEXT, 
-	modifieddate TIMESTAMP
+	modifieddate TIMESTAMP,
+	PRIMARY KEY(uniqueid),
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS attributenames
 (
 	attributeid INT,
 	name TEXT,
-	localeid SMALLINT
+	localeid SMALLINT,
+	PRIMARY KEY(attributeid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 -- Non-Index
@@ -76,7 +91,11 @@ CREATE TABLE IF NOT EXISTS productattributes
 	isabsolute SMALLINT, 
 	isactive SMALLINT, 
 	localeid SMALLINT, 
-	type INT
+	type INT,
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid),
+	FOREIGN KEY(unitid) REFERENCES unitnames(unitid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS productdescriptions 
@@ -85,21 +104,26 @@ CREATE TABLE IF NOT EXISTS productdescriptions
 	description TEXT, 
 	isdefault CHAR(1), 
 	type CHAR(1), 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS productlocales 
 (
 	productid INT, 
 	isactive CHAR(1), 
-	published TINYTEXT
+	published TINYTEXT, 
+	FOREIGN KEY(productid) REFERENCES product(productid)
 );
 
 CREATE TABLE IF NOT EXISTS productaccessories 
 (
 	productid INT, 
 	accessoryid INT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS searchattributes 
@@ -108,12 +132,17 @@ CREATE TABLE IF NOT EXISTS searchattributes
 	categoryid INT, 
 	unknownid INT, 
 	isactive SMALLINT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(categoryid) REFERENCES categorynames(categoryid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
 CREATE TABLE IF NOT EXISTS productkeywords 
 (
 	productid INT, 
 	text TEXT, 
-	localeid SMALLINT
+	localeid SMALLINT,
+	FOREIGN KEY(productid) REFERENCES product(productid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );

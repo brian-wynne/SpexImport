@@ -258,26 +258,13 @@ namespace SpexImport
                 return;
             }
 
+            var cmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0;", conn);
+            cmd.ExecuteScalar();
+
             ParseSpexDirectory(tables, conn);
 
-            //Load keys.sql
-            try
-            {
-                Logger("[MySQL] Setting up indexs on tables...\n");
-                string script = File.ReadAllText(@".\..\keys.sql");
-
-                MySqlScript sqlScript = new MySqlScript(conn, script);
-                sqlScript.Execute();
-            }
-            catch (Exception)
-            {
-                Logger("[MySQL] An error occured when attempting to run keys.sql... ");
-                Logger("Program aborted...\n");
-                conn.Close();
-                Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
-                System.Environment.Exit(0);
-                return;
-            }
+            cmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=1;", conn);
+            cmd.ExecuteScalar();
 
             conn.Close();
             Logger("[MySQL] Connection closed\n");
