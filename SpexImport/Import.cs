@@ -228,7 +228,7 @@ namespace SpexImport
 
             try
             {
-                Logger("[MySQL] Establishing connection to MySQL\n");
+                Logger("[MySQL] Establishing connection\n");
                 conn.Open();
             }
             catch (Exception)
@@ -251,6 +251,9 @@ namespace SpexImport
             catch (Exception)
             {
                 Logger("[MySQL] An error occured when attempting to run init.sql");
+                Logger("Program aborted...\n");
+                Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
+                System.Environment.Exit(0);
                 return;
             }
 
