@@ -33,7 +33,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.08";
+        private static readonly string BUILD_VERSION = "1.09";
 
         static void Main(string[] args)
         {
@@ -46,14 +46,18 @@ namespace SpexImport
             //TODO: Add this to loop from string of the ini file
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic_global.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/featurebullet/featurebullet_EN_US_current_mysql.zip", "featurebullet.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/EN_US/tax_EN_US_current_mysql.zip", "tax.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/global/tax_global_current_mysql.zip", "tax_global.zip");
 
             UnzipCatalogContents("basic.zip");
+            UnzipCatalogContents("basic_global.zip");
             UnzipCatalogContents("accessories.zip");
             UnzipCatalogContents("featurebullet.zip");
             UnzipCatalogContents("tax.zip");
+            UnzipCatalogContents("tax_global.zip");
 
             ConnectToDatabase();
 
@@ -205,12 +209,24 @@ namespace SpexImport
                 { "EN_US_B_searchattributes.csv", "searchattributes" },
                 { "EN_US_B_productkeywords.csv", "productkeywords" },
 
+                //basic_global.zip
+                { "G_B_searchattributevalues.csv", "searchattributevalues" },
+
                 //tax.zip
                 { "EN_US_attributenames.csv", "attributenames" },
                 { "EN_US_categorynames.csv", "categorynames" },
                 { "EN_US_headernames.csv", "headernames" },
                 { "EN_US_locales.csv", "locales" },
                 { "EN_US_unitnames.csv", "unitnames" },
+
+                //tax_global.zip
+                { "G_category.csv", "category" }, //
+                { "G_categorydisplayattributes.csv", "categorydisplayattributes" }, //
+                { "G_categoryheader.csv", "categoryheader" }, //
+                { "G_categorysearchattributes.csv", "categorysearchattributes" }, // 
+                { "G_manufacturer.csv", "manufacturer" }, //
+                //{ "G_manufacturermapping.csv", "manufacturermapping" },
+                { "G_units.csv", "units" },
 
                 //featurebullets
                 { "EN_US_F_productfeaturebullets.csv", "productfeaturebullets" }

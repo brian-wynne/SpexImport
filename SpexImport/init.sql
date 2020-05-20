@@ -36,16 +36,18 @@ CREATE TABLE IF NOT EXISTS product
 );
 CREATE INDEX mfg_pn ON product(mfgpn);
 
-CREATE TABLE IF NOT EXISTS categorynames
+CREATE TABLE IF NOT EXISTS category 
 (
 	categoryid INT,
-	name TEXT,
-	localeid SMALLINT,
-	PRIMARY KEY(categoryid),
-	FOREIGN KEY(localeid) REFERENCES locales(localeid)
+	parentcategoryid INT,
+	isactive SMALLINT,
+	ordernumber SMALLINT,
+	catlevel SMALLINT,
+	PRIMARY KEY(categoryid)
 );
 
-ALTER TABLE product ADD FOREIGN KEY (categoryid) REFERENCES categorynames(categoryid);
+ALTER TABLE product ADD FOREIGN KEY (categoryid) REFERENCES category(categoryid);
+ALTER TABLE category ADD FOREIGN KEY(parentcategoryid) REFERENCES category(categoryid);
 
 CREATE TABLE IF NOT EXISTS headernames
 (
@@ -76,6 +78,24 @@ CREATE TABLE IF NOT EXISTS attributenames
 	localeid SMALLINT,
 	PRIMARY KEY(attributeid),
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
+);
+
+CREATE TABLE IF NOT EXISTS manufacturer
+(
+	manufacturerid INT,
+	name TEXT,
+	url TEXT,
+	logowidth INT,
+	logoheight INT,
+	PRIMARY KEY(manufacturerid)
+);
+
+CREATE TABLE IF NOT EXISTS units
+(
+	unitid INT,
+	baseunitid INT,
+	mutliple DOUBLE,
+	PRIMARY KEY(unitid)
 );
 
 -- Non-Index
@@ -126,15 +146,27 @@ CREATE TABLE IF NOT EXISTS productaccessories
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
+CREATE TABLE IF NOT EXISTS searchattributevalues
+(
+	valueid INT,
+	value INT,
+	absolutevalue DOUBLE,
+	unitid INT,
+	isabsolute SMALLINT,
+	PRIMARY KEY(valueid),
+	FOREIGN KEY(unitid) REFERENCES units(unitid)
+);
+
 CREATE TABLE IF NOT EXISTS searchattributes 
 (
 	productid INT, 
 	categoryid INT, 
-	unknownid INT, 
+	valueid INT, 
 	isactive SMALLINT, 
 	localeid SMALLINT,
 	FOREIGN KEY(productid) REFERENCES product(productid),
-	FOREIGN KEY(categoryid) REFERENCES categorynames(categoryid),
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
+	FOREIGN KEY(valueid) REFERENCES searchattributevalues(valueid),
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
 
@@ -145,4 +177,46 @@ CREATE TABLE IF NOT EXISTS productkeywords
 	localeid SMALLINT,
 	FOREIGN KEY(productid) REFERENCES product(productid),
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
+);
+
+CREATE TABLE IF NOT EXISTS categorysearchattributes
+(
+	categoryid INT,
+	attributeid INT,
+	isactive SMALLINT,
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
+	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid)
+);
+
+CREATE TABLE IF NOT EXISTS categoryheader
+(
+	headerid INT,
+	categoryid INT,
+	isactive SMALLINT,
+	templatetype SMALLINT,
+	displayorder SMALLINT,
+	FOREIGN KEY(headerid) REFERENCES headernames(headerid),
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid)
+);
+
+CREATE TABLE IF NOT EXISTS categorynames
+(
+	categoryid INT,
+	name TEXT,
+	localeid SMALLINT,
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
+	FOREIGN KEY(localeid) REFERENCES locales(localeid)
+);
+
+CREATE TABLE IF NOT EXISTS categorydisplayattributes 
+(
+	headerid INT,
+	categoryid INT,
+	attributeid INT,
+	isactive SMALLINT,
+	templatetype SMALLINT,
+	displayorder SMALLINT,
+	FOREIGN KEY(headerid) REFERENCES headernames(headerid),
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
+	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid)
 );
