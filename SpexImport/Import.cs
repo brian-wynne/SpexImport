@@ -46,7 +46,7 @@ namespace SpexImport
             //TODO: Add this to loop from string of the ini file
 
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic.zip");
-            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/basic/basic_EN_US_current_mysql.zip", "basic_global.zip");
+            DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/global/basic/basic_global_current_mysql.zip", "basic_global.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/accessories/accessories_EN_US_current_mysql.zip", "accessories.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/content/EN_US/featurebullet/featurebullet_EN_US_current_mysql.zip", "featurebullet.zip");
             DownloadFromFTP("ftp://ftp.etilize.com/IT_CE/tax/EN_US/tax_EN_US_current_mysql.zip", "tax.zip");
