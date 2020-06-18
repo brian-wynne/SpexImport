@@ -3,6 +3,16 @@ CREATE DATABASE spex;
 USE spex;
 
 -- Index tables
+CREATE TABLE IF NOT EXISTS manufacturer
+(
+	manufacturerid INT,
+	name TEXT,
+	url TEXT,
+	logowidth INT,
+	logoheight INT,
+	PRIMARY KEY(manufacturerid)
+);
+
 CREATE TABLE IF NOT EXISTS locales 
 (
 	localeid SMALLINT,
@@ -13,28 +23,21 @@ CREATE TABLE IF NOT EXISTS locales
 	PRIMARY KEY(localeid)
 );
 
-CREATE TABLE IF NOT EXISTS unitnames
+CREATE TABLE IF NOT EXISTS units
 (
 	unitid INT,
 	baseunitid INT,
-	multiple DOUBLE,
+	mutliple DOUBLE,
 	PRIMARY KEY(unitid)
 );
 
-CREATE TABLE IF NOT EXISTS product 
+CREATE TABLE IF NOT EXISTS unitnames
 (
-	productid INT NOT NULL, 
-	mfgid VARCHAR(16), 
-	mfgpn VARCHAR(128) NOT NULL, 
-	categoryid INT, 
-	is_active CHAR(1), 
-	equivalency TEXT, 
-	create_date TIMESTAMP, 
-	modify_date TIMESTAMP, 
-	last_update TIMESTAMP, 
-	PRIMARY KEY(productid)
+	unitid INT,
+	name TEXT,
+	localeid SMALLINT,
+	FOREIGN KEY(unitid) REFERENCES units(unitid)
 );
-CREATE INDEX mfg_pn ON product(mfgpn);
 
 CREATE TABLE IF NOT EXISTS category 
 (
@@ -46,8 +49,24 @@ CREATE TABLE IF NOT EXISTS category
 	PRIMARY KEY(categoryid)
 );
 
-ALTER TABLE product ADD FOREIGN KEY (categoryid) REFERENCES category(categoryid);
 ALTER TABLE category ADD FOREIGN KEY(parentcategoryid) REFERENCES category(categoryid);
+
+CREATE TABLE IF NOT EXISTS product 
+(
+	productid INT NOT NULL, 
+	manufacturerid INT,
+	mfgpn VARCHAR(128) NOT NULL, 
+	categoryid INT, 
+	isaccessory TINYINT,
+	equivalency TEXT, 
+	create_date TIMESTAMP, 
+	modify_date TIMESTAMP, 
+	last_update TIMESTAMP, 
+	PRIMARY KEY(productid),
+	FOREIGN KEY(manufacturerid) REFERENCES manufacturer(manufacturerid),
+	FOREIGN KEY(categoryid) REFERENCES category(categoryid)
+);
+CREATE INDEX mfg_pn ON product(mfgpn);
 
 CREATE TABLE IF NOT EXISTS headernames
 (
@@ -73,29 +92,11 @@ CREATE TABLE IF NOT EXISTS productfeaturebullets
 
 CREATE TABLE IF NOT EXISTS attributenames
 (
-	attributeid INT,
+	attributeid BIGINT,
 	name TEXT,
 	localeid SMALLINT,
 	PRIMARY KEY(attributeid),
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
-);
-
-CREATE TABLE IF NOT EXISTS manufacturer
-(
-	manufacturerid INT,
-	name TEXT,
-	url TEXT,
-	logowidth INT,
-	logoheight INT,
-	PRIMARY KEY(manufacturerid)
-);
-
-CREATE TABLE IF NOT EXISTS units
-(
-	unitid INT,
-	baseunitid INT,
-	mutliple DOUBLE,
-	PRIMARY KEY(unitid)
 );
 
 -- Non-Index
@@ -103,7 +104,7 @@ CREATE TABLE IF NOT EXISTS units
 CREATE TABLE IF NOT EXISTS productattributes 
 (
 	productid INT, 
-	attributeid INT, 
+	attributeid BIGINT, 
 	setnumber SMALLINT, 
 	text TEXT, 
 	absolutevalue DOUBLE, 
@@ -149,7 +150,7 @@ CREATE TABLE IF NOT EXISTS productaccessories
 CREATE TABLE IF NOT EXISTS searchattributevalues
 (
 	valueid INT,
-	value INT,
+	value TEXT,
 	absolutevalue DOUBLE,
 	unitid INT,
 	isabsolute SMALLINT,
@@ -160,12 +161,13 @@ CREATE TABLE IF NOT EXISTS searchattributevalues
 CREATE TABLE IF NOT EXISTS searchattributes 
 (
 	productid INT, 
-	categoryid INT, 
+	attributeid BIGINT, 
 	valueid INT, 
-	isactive SMALLINT, 
-	localeid SMALLINT,
+	localeid SMALLINT, 
+	setnumber SMALLINT,
+	isactive SMALLINT,
 	FOREIGN KEY(productid) REFERENCES product(productid),
-	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
+	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid),
 	FOREIGN KEY(valueid) REFERENCES searchattributevalues(valueid),
 	FOREIGN KEY(localeid) REFERENCES locales(localeid)
 );
@@ -182,7 +184,7 @@ CREATE TABLE IF NOT EXISTS productkeywords
 CREATE TABLE IF NOT EXISTS categorysearchattributes
 (
 	categoryid INT,
-	attributeid INT,
+	attributeid BIGINT,
 	isactive SMALLINT,
 	FOREIGN KEY(categoryid) REFERENCES category(categoryid),
 	FOREIGN KEY(attributeid) REFERENCES attributenames(attributeid)
@@ -212,7 +214,7 @@ CREATE TABLE IF NOT EXISTS categorydisplayattributes
 (
 	headerid INT,
 	categoryid INT,
-	attributeid INT,
+	attributeid BIGINT,
 	isactive SMALLINT,
 	templatetype SMALLINT,
 	displayorder SMALLINT,

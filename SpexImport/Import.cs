@@ -33,7 +33,34 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.09";
+        private static readonly string BUILD_VERSION = "1.1";
+
+        private static Dictionary<string, string> sqlTables = new Dictionary<string, string>()
+        {
+            //Setup PRIMARY KEYS first
+            { "manufacturer", "G_manufacturer.csv" },
+            { "locales", "EN_US_locales.csv" },
+            { "units", "G_units.csv" },
+            { "unitnames", "EN_US_unitnames.csv" },
+            { "category", "G_category.csv" },
+            { "product", "EN_US_B_product.csv" },
+            { "headernames", "EN_US_headernames.csv" },
+            { "productbulletfeatures", "EN_US_F_productfeaturebullets.csv" },
+            { "attributenames", "EN_US_attributenames.csv" },
+
+            //Setup FOREIGN KEYS after
+            { "productattributes", "EN_US_B_productattributes.csv" },
+            { "productdescriptions", "EN_US_B_productdescriptions.csv" },
+            { "productlocales", "EN_US_B_productlocales.csv" },
+            { "productaccessories", "EN_US_A_productaccessories.csv" },
+            { "searchattributevalues", "G_B_searchattributevalues.csv" },
+            { "searchattributes", "EN_US_B_searchattributes.csv" },
+            { "productkeywords", "EN_US_B_productkeywords.csv" },
+            { "categorysearchattributes", "G_categorysearchattributes.csv" },
+            { "categoryheader", "G_categoryheader.csv" },
+            { "categorynames", "EN_US_categorynames.csv" },
+            { "categorydisplayattributes", "G_categorydisplayattributes.csv" }
+        };
 
         static void Main(string[] args)
         {
@@ -163,9 +190,9 @@ namespace SpexImport
                     Console.Write("\r{0} MB   ", (total/1000000));
                 }
             }
-            catch (WebException)
+            catch (WebException ex)
             {
-                Logger("\n[FTP] An error occured... ");
+                Logger("\n[FTP] An error occured... \n" + ex + "\n");
                 //Logger(ex + "\n");
             }
 
@@ -197,41 +224,6 @@ namespace SpexImport
 
         static void ConnectToDatabase()
         {
-            var tables = new Dictionary<string, string>()
-            {
-                //basic.zip
-                { "EN_US_B_product.csv", "product" },
-                { "EN_US_B_productattributes.csv", "productattributes" },
-                { "EN_US_B_productdescriptions.csv", "productdescriptions" },
-                { "EN_US_B_productfeaturebullets.csv", "productfeaturebullets" },
-                { "EN_US_B_productlocales.csv", "productlocales" },
-                { "EN_US_A_productaccessories.csv", "productaccessories" },
-                { "EN_US_B_searchattributes.csv", "searchattributes" },
-                { "EN_US_B_productkeywords.csv", "productkeywords" },
-
-                //basic_global.zip
-                { "G_B_searchattributevalues.csv", "searchattributevalues" },
-
-                //tax.zip
-                { "EN_US_attributenames.csv", "attributenames" },
-                { "EN_US_categorynames.csv", "categorynames" },
-                { "EN_US_headernames.csv", "headernames" },
-                { "EN_US_locales.csv", "locales" },
-                { "EN_US_unitnames.csv", "unitnames" },
-
-                //tax_global.zip
-                { "G_category.csv", "category" }, //
-                { "G_categorydisplayattributes.csv", "categorydisplayattributes" }, //
-                { "G_categoryheader.csv", "categoryheader" }, //
-                { "G_categorysearchattributes.csv", "categorysearchattributes" }, // 
-                { "G_manufacturer.csv", "manufacturer" }, //
-                //{ "G_manufacturermapping.csv", "manufacturermapping" },
-                { "G_units.csv", "units" },
-
-                //featurebullets
-                { "EN_US_F_productfeaturebullets.csv", "productfeaturebullets" }
-            };
-
             MySqlConnectionStringBuilder connStr = new MySqlConnectionStringBuilder();
             connStr.Server = db_host;
             connStr.UserID = db_user;
@@ -256,28 +248,10 @@ namespace SpexImport
                 return;
             }
 
-            //Load init.sql
-            try
-            {
-                string script = File.ReadAllText(@".\..\init.sql");
-
-                MySqlScript sqlScript = new MySqlScript(conn, script);
-                sqlScript.Execute();
-            }
-            catch (Exception)
-            {
-                Logger("[MySQL] An error occured when attempting to run init.sql... ");
-                Logger("Program aborted...\n");
-                conn.Close();
-                Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
-                System.Environment.Exit(0);
-                return;
-            }
-
             var cmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=0;", conn);
             cmd.ExecuteScalar();
 
-            ParseSpexDirectory(tables, conn);
+            LoadSQLFiles(conn);
 
             cmd = new MySqlCommand("SET FOREIGN_KEY_CHECKS=1;", conn);
             cmd.ExecuteScalar();
@@ -286,34 +260,6 @@ namespace SpexImport
             Logger("[MySQL] Connection closed\n");
 
             DeleteSpexDirectory();
-        }
-
-        static void ParseSpexDirectory(dynamic tables, MySqlConnection conn)
-        {
-            string dir = Directory.GetCurrentDirectory();
-
-            if (!Directory.Exists(dir + @"\spex"))
-            {
-                Logger("No directory found for 'spex' folder, aborting");
-                return;
-            }
-
-            string[] files = Directory.GetFiles(dir + @"\spex\", "*.csv");
-
-            for (int i = 0; i < files.Length; i++)
-            {
-                string file = Path.GetFileName(files[i]);
-                foreach (var sqldata in tables)
-                {
-                    if (sqldata.Key == file)
-                    {
-                        Logger("[MySQL] Importing " + file + "...");
-                        ImportSpexData(conn, sqldata.Key, sqldata.Value);
-                        Logger(" Done\n");
-                        break;
-                    }
-                }
-            }
         }
 
         static void ImportSpexData(MySqlConnection conn, string filename, string tablename)
@@ -370,6 +316,54 @@ namespace SpexImport
 
             if (bprint)
                 Console.Write(message);
+        }
+
+        static void LoadSQLFiles(MySqlConnection conn)
+        {
+            //string file = File.Exists(@".\..\scripts\" +  + ".sql");
+            string[] files = Directory.GetFiles(@".\..\scripts\*.sql");
+            for (int i = 0; i < files.Length; i++)
+            {
+                string file = Path.GetFileName(files[i]);
+                if (File.Exists(@".\..\scripts\" + file))
+                    LoadSQLFile(conn, file);
+            }
+        }
+
+        static void LoadSQLFile(MySqlConnection conn, string file)
+        {
+            try
+            {
+                string script = File.ReadAllText(@".\..\scripts\" + file);
+
+                MySqlScript sqlScript = new MySqlScript(conn, script);
+                sqlScript.Execute();
+            }
+            catch (Exception ex)
+            {
+                Logger("[MySQL] Failed to run script -> " + file + "\n->" + ex);
+                return;
+            }
+
+            string tablename = file.Replace(".sql", "");
+            string filename = sqlTables[tablename];
+
+            Logger("[MySQL] Importing -> " + file + "... ");
+
+            //Import spex data to temp table
+            ImportSpexData(conn, filename, tablename + "_temp");
+
+            Logger("[MySQL] Renaming table -> " + tablename + "_temp... ");
+
+            //Drop older table
+            var cmd = new MySqlCommand("DROP TABLE IF EXISTS " + tablename, conn);
+            cmd.ExecuteScalar();
+
+            //Rename temp table to regular tablename
+            cmd = new MySqlCommand("ALTER TABLE " + tablename + "_temp RENAME " + tablename, conn);
+            cmd.ExecuteScalar();
+
+            Logger("[MySQL] " + tablename + " Complete\n");
         }
     }
 }
