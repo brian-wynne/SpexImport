@@ -33,7 +33,7 @@ namespace SpexImport
         private static uint db_port;
 
         private static string ftp_user, ftp_pass, ftp_url, ftp_files;
-        private static readonly string BUILD_VERSION = "1.1";
+        private static readonly string BUILD_VERSION = "2.0";
 
         private static Dictionary<string, string> sqlTables = new Dictionary<string, string>()
         {
@@ -87,7 +87,6 @@ namespace SpexImport
             UnzipCatalogContents("tax_global.zip");
 
             ConnectToDatabase();
-
             System.Environment.Exit(0);
         }
 
@@ -321,7 +320,17 @@ namespace SpexImport
         static void LoadSQLFiles(MySqlConnection conn)
         {
             //string file = File.Exists(@".\..\scripts\" +  + ".sql");
-            string[] files = Directory.GetFiles(@".\..\scripts\*.sql");
+            string dir = Directory.GetCurrentDirectory();
+            string[] files = Directory.GetFiles(dir + @"\..\scripts\", "*.sql");
+
+            if (files.Length <= 0)
+            {
+                Logger("[MySQL] No directory /scripts/ found... Aborting\n");
+                Thread.Sleep(5 * 1000); //Show error message for 5 seconds before exiting
+                System.Environment.Exit(0);
+                return;
+            }
+
             for (int i = 0; i < files.Length; i++)
             {
                 string file = Path.GetFileName(files[i]);
@@ -348,12 +357,12 @@ namespace SpexImport
             string tablename = file.Replace(".sql", "");
             string filename = sqlTables[tablename];
 
-            Logger("[MySQL] Importing -> " + file + "... ");
+            Logger("[MySQL] Importing -> " + file + "... \n");
 
             //Import spex data to temp table
             ImportSpexData(conn, filename, tablename + "_temp");
 
-            Logger("[MySQL] Renaming table -> " + tablename + "_temp... ");
+            Logger("[MySQL] Renaming table -> " + tablename + "_temp... \n");
 
             //Drop older table
             var cmd = new MySqlCommand("DROP TABLE IF EXISTS " + tablename, conn);
@@ -363,7 +372,7 @@ namespace SpexImport
             cmd = new MySqlCommand("ALTER TABLE " + tablename + "_temp RENAME " + tablename, conn);
             cmd.ExecuteScalar();
 
-            Logger("[MySQL] " + tablename + " Complete\n");
+            Logger("[MySQL] " + tablename + " -> Import Complete\n");
         }
     }
 }
