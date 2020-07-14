@@ -45,7 +45,7 @@ namespace SpexImport
             { "category", "G_category.csv" },
             { "product", "EN_US_B_product.csv" },
             { "headernames", "EN_US_headernames.csv" },
-            { "productbulletfeatures", "EN_US_F_productfeaturebullets.csv" },
+            { "productfeaturebullets", "EN_US_F_productfeaturebullets.csv" },
             { "attributenames", "EN_US_attributenames.csv" },
 
             //Setup FOREIGN KEYS after
@@ -357,12 +357,10 @@ namespace SpexImport
             string tablename = file.Replace(".sql", "");
             string filename = sqlTables[tablename];
 
-            Logger("[MySQL] Importing -> " + file + "... \n");
+            Logger("[MySQL] Importing -> " + tablename + " ... ");
 
             //Import spex data to temp table
             ImportSpexData(conn, filename, tablename + "_temp");
-
-            Logger("[MySQL] Renaming table -> " + tablename + "_temp... \n");
 
             //Drop older table
             var cmd = new MySqlCommand("DROP TABLE IF EXISTS " + tablename, conn);
@@ -372,7 +370,7 @@ namespace SpexImport
             cmd = new MySqlCommand("ALTER TABLE " + tablename + "_temp RENAME " + tablename, conn);
             cmd.ExecuteScalar();
 
-            Logger("[MySQL] " + tablename + " -> Import Complete\n");
+            Logger("Done\n");
         }
     }
 }
