@@ -230,6 +230,7 @@ namespace SpexImport
             connStr.Database = db_name;
             connStr.Port = db_port;
             connStr.AllowLoadLocalInfile = true;
+            connStr.DefaultCommandTimeout = 0;
 
             MySqlConnection conn = new MySqlConnection(connStr.ToString());
 
@@ -264,7 +265,7 @@ namespace SpexImport
         static void ImportSpexData(MySqlConnection conn, string filename, string tablename)
         {
             string dir = Directory.GetCurrentDirectory();
-  
+
             MySqlBulkLoader bulk = new MySqlBulkLoader(conn);
             bulk.TableName = tablename;
             bulk.FieldTerminator = ",";
@@ -276,6 +277,7 @@ namespace SpexImport
             bulk.FileName = dir + @"\spex\" + filename;
             bulk.Local = true;
             bulk.NumberOfLinesToSkip = 1;
+            //bulk.Timeout = 10 * 60;
             bulk.Load();
         }
 
@@ -361,47 +363,38 @@ namespace SpexImport
             //Import spex data to temp table
             ImportSpexData(conn, filename, tablename + "_temp");
 
-            Logger("[MySQL] OPTIMIZE ATTEMPT");
-
             //Optimize MySQL Table
             try
             {
                 var optimize = new MySqlCommand("OPTIMIZE TABLE " + tablename + "_temp", conn);
+                optimize.CommandTimeout = 5 * 60;
                 optimize.ExecuteScalar();
             } catch (Exception ex)
             {
                 Logger("[MySQL] Failed to run OPTIMIZE TABLE ->\n->" + ex);
-                return;
             }
 
-            Logger("[MySQL] OPTIMIZE");
-
             SetupSQLKeys(conn, file);
-
-            Logger("[MySQL] KEYS");
 
             //Drop older table
             var cmd = new MySqlCommand("DROP TABLE IF EXISTS " + tablename, conn);
             cmd.ExecuteScalar();
 
-            Logger("[MySQL] DROP TABLES");
-
             //Rename temp table to regular tablename
             cmd = new MySqlCommand("ALTER TABLE " + tablename + "_temp RENAME " + tablename, conn);
             cmd.ExecuteScalar();
-
-            Logger("[MySQL] ALTERED TABLE");
 
             Logger("Done\n");
         }
 
         private static bool SetupSQLKeys(MySqlConnection conn, string file)
         {
+            string script = File.ReadAllText(@".\..\scripts\keys\" + file);
+            MySqlScript sqlScript = new MySqlScript(conn, script);
+            sqlScript.Connection = conn;
+
             try
             {
-                string script = File.ReadAllText(@".\..\scripts\keys\" + file);
-
-                MySqlScript sqlScript = new MySqlScript(conn, script);
                 sqlScript.Execute();
             }
             catch (Exception ex)
