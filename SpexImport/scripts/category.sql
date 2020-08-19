@@ -4,8 +4,5 @@ CREATE TABLE IF NOT EXISTS category_temp
 	parentcategoryid INT,
 	isactive SMALLINT,
 	ordernumber SMALLINT,
-	catlevel SMALLINT,
-	PRIMARY KEY(categoryid)
+	catlevel SMALLINT
 );
-
-ALTER TABLE category_temp ADD FOREIGN KEY(parentcategoryid) REFERENCES category_temp(categoryid);

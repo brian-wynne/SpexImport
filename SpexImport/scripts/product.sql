@@ -8,9 +8,5 @@ CREATE TABLE IF NOT EXISTS product_temp
 	equivalency TEXT, 
 	create_date TIMESTAMP, 
 	modify_date TIMESTAMP, 
-	last_update TIMESTAMP, 
-	PRIMARY KEY(productid),
-	FOREIGN KEY(manufacturerid) REFERENCES manufacturer(manufacturerid),
-	FOREIGN KEY(categoryid) REFERENCES category(categoryid)
+	last_update TIMESTAMP
 );
-CREATE INDEX mfg_pn ON product_temp(mfgpn);

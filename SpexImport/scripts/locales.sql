@@ -4,6 +4,5 @@ CREATE TABLE IF NOT EXISTS locales_temp
 	isactive TINYINT,
 	languagecode VARCHAR(5),
 	countrycode VARCHAR(5),
-	name TEXT,
-	PRIMARY KEY(localeid)
+	name TEXT
 );

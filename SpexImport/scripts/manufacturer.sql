@@ -4,6 +4,5 @@ CREATE TABLE IF NOT EXISTS manufacturer_temp
 	name TEXT,
 	url TEXT,
 	logowidth INT,
-	logoheight INT,
-	PRIMARY KEY(manufacturerid)
+	logoheight INT
 );

@@ -347,8 +347,7 @@ namespace SpexImport
 
                 MySqlScript sqlScript = new MySqlScript(conn, script);
                 sqlScript.Execute();
-            }
-            catch (Exception ex)
+            } catch (Exception ex)
             {
                 Logger("[MySQL] Failed to run script -> " + file + "\n->" + ex);
                 return;
@@ -362,15 +361,55 @@ namespace SpexImport
             //Import spex data to temp table
             ImportSpexData(conn, filename, tablename + "_temp");
 
+            Logger("[MySQL] OPTIMIZE ATTEMPT");
+
+            //Optimize MySQL Table
+            try
+            {
+                var optimize = new MySqlCommand("OPTIMIZE TABLE " + tablename + "_temp", conn);
+                optimize.ExecuteScalar();
+            } catch (Exception ex)
+            {
+                Logger("[MySQL] Failed to run OPTIMIZE TABLE ->\n->" + ex);
+                return;
+            }
+
+            Logger("[MySQL] OPTIMIZE");
+
+            SetupSQLKeys(conn, file);
+
+            Logger("[MySQL] KEYS");
+
             //Drop older table
             var cmd = new MySqlCommand("DROP TABLE IF EXISTS " + tablename, conn);
             cmd.ExecuteScalar();
+
+            Logger("[MySQL] DROP TABLES");
 
             //Rename temp table to regular tablename
             cmd = new MySqlCommand("ALTER TABLE " + tablename + "_temp RENAME " + tablename, conn);
             cmd.ExecuteScalar();
 
+            Logger("[MySQL] ALTERED TABLE");
+
             Logger("Done\n");
+        }
+
+        private static bool SetupSQLKeys(MySqlConnection conn, string file)
+        {
+            try
+            {
+                string script = File.ReadAllText(@".\..\scripts\keys\" + file);
+
+                MySqlScript sqlScript = new MySqlScript(conn, script);
+                sqlScript.Execute();
+            }
+            catch (Exception ex)
+            {
+                Logger("[MySQL] Failed to run key script -> " + file + "\n->" + ex);
+                return false;
+            }
+            return true;
         }
     }
 }
